@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api";
+const API_URL = import.meta.env.VITE_API_URL || "/api";
 const DEFAULT_TIMEOUT_MS = 15000;
 
 async function request(path, options = {}) {
@@ -33,6 +33,10 @@ async function request(path, options = {}) {
   } catch (error) {
     if (error.name === "AbortError") {
       throw new Error("A API demorou para responder. Reinicie o backend e tente novamente.");
+    }
+
+    if (error instanceof TypeError || error.message === "Failed to fetch") {
+      throw new Error("Nao foi possivel conectar a API. Verifique se o backend esta em execucao e reinicie o servidor do frontend para ativar o proxy.");
     }
 
     throw error;

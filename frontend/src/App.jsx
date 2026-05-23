@@ -1,5 +1,6 @@
 import { startTransition, useEffect, useState } from "react";
 import { api } from "./services/api";
+import ClientesPage from "./pages/Clientes";
 import logoAcaoGames from "./assets/images/logo acao games.jpg";
 import arrowDownIcon from "./assets/icons/arrow-down-to-line.svg";
 import arrowUpIcon from "./assets/icons/arrow-up-from-line.svg";
@@ -222,9 +223,21 @@ function App() {
     setFeedback({ type: "success", message: `Tela de ${label} sera criada futuramente.` });
   }
 
+  function openClientesPage() {
+    startTransition(() => {
+      setActiveSection("clientes");
+    });
+    setFeedback(null);
+  }
+
   function handleMenuItem(item) {
     if (item.id === "dashboard") {
       navigateToDashboard();
+      return;
+    }
+
+    if (item.id === "clientes") {
+      openClientesPage();
       return;
     }
 
@@ -467,8 +480,12 @@ function App() {
     }
   }
 
-  async function handleVendaSubmit(event) {
+  async function handleVendaSubmit(event, shouldOpenPdf = false) {
     event.preventDefault();
+    if (!validateFormEvent(event)) {
+      return;
+    }
+
     setSavingVenda(true);
     setFeedback(null);
 
@@ -491,6 +508,10 @@ function App() {
       });
       setVendaModalOpen(false);
       await loadDashboard();
+
+      if (shouldOpenPdf) {
+        openSaleReceiptPdf(venda);
+      }
     } catch (error) {
       setFeedback({
         type: "error",
@@ -587,6 +608,21 @@ function App() {
       </header>
 
       <main className="main-content">
+        {feedback ? (
+          <div className={`feedback feedback--${feedback.type}`}>
+            {feedback.message}
+          </div>
+        ) : null}
+
+        {activeSection === "clientes" ? (
+          <ClientesPage
+            clientes={clientes}
+            onClientesChange={setClientes}
+            onFeedback={setFeedback}
+          />
+        ) : null}
+
+        <div className={activeSection === "clientes" ? "screen-hidden" : "dashboard-view"}>
         <section id="dashboard" className="hero-lobby">
           <div className="hero-lobby__center">
             <span className="section-label">Painel operacional</span>
@@ -611,12 +647,6 @@ function App() {
             </div>
           </div>
         </section>
-
-        {feedback ? (
-          <div className={`feedback feedback--${feedback.type}`}>
-            {feedback.message}
-          </div>
-        ) : null}
 
         <section className="filters-bar" aria-label="Filtros rapidos">
           <label className="search-room">
@@ -702,6 +732,7 @@ function App() {
         </Panel>
 
         {loading ? <div className="loading-overlay">Carregando dados...</div> : null}
+        </div>
       </main>
 
       {entradaModalOpen ? (
@@ -1126,7 +1157,7 @@ function VendaModal({
           </div>
         </header>
 
-        <form id="venda-form" className="entry-form" onSubmit={onSubmit}>
+        <form id="venda-form" className="entry-form" onSubmit={(event) => onSubmit(event, false)}>
           <div className="entry-form__grid">
             <fieldset className="form-card">
               <legend>Dados da venda</legend>
@@ -1222,8 +1253,11 @@ function VendaModal({
             <button type="button" className="ghost-button" onClick={onClose} disabled={saving}>
               Cancelar
             </button>
-            <button type="submit" className="gold-button" disabled={saving}>
+            <button type="submit" className="primary-button" disabled={saving}>
               {saving ? "Salvando..." : "Salvar venda"}
+            </button>
+            <button type="button" className="gold-button" disabled={saving} onClick={(event) => onSubmit(event, true)}>
+              Salvar venda e gerar PDF
             </button>
           </footer>
         </form>
@@ -1402,6 +1436,16 @@ function openServiceOrderPdf(ordem) {
   }
 
   const pdfUrl = api.fileUrl(`/ordens-servico/${idOrdemServico}/pdf`);
+  window.open(pdfUrl, "_blank", "noopener,noreferrer");
+}
+
+function openSaleReceiptPdf(venda) {
+  const idVenda = typeof venda === "object" ? venda?.idVenda : venda;
+  if (!idVenda) {
+    return;
+  }
+
+  const pdfUrl = api.fileUrl(`/vendas/${idVenda}/pdf`);
   window.open(pdfUrl, "_blank", "noopener,noreferrer");
 }
 
