@@ -84,9 +84,10 @@ textarea:focus-visible {
 }
 
 .brand-logo-image {
-  width: 44px;
-  height: 44px;
+  width: 46px;
+  height: 46px;
   border-radius: 6px;
+  object-fit: contain;
 }
 
 .top-nav {
@@ -151,17 +152,59 @@ textarea:focus-visible {
   background: #eef9fb;
 }
 
-.notification-dot {
-  top: 7px;
-  right: 7px;
-  border-color: #ffffff;
-  background: var(--red);
+.header-user-chip {
+  border-color: var(--line);
+  background: #ffffff;
+}
+
+.header-user-chip span {
+  color: var(--text);
+}
+
+.header-user-chip small {
+  color: var(--muted);
 }
 
 .main-content {
   width: min(100% - 40px, 1560px);
   gap: 20px;
   padding: 28px 0 64px;
+}
+
+.login-shell::before {
+  background:
+    linear-gradient(180deg, rgba(248, 251, 255, 0.92), rgba(244, 247, 251, 0.82) 42%, rgba(244, 247, 251, 0.96)),
+    url("./assets/images/FUNDO DE PERSONAGENS.jpg") center / cover no-repeat;
+}
+
+.login-shell::after {
+  background: linear-gradient(0deg, rgba(244, 247, 251, 0.92), transparent);
+}
+
+.login-card {
+  border-color: var(--line);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(245, 249, 252, 0.96));
+  box-shadow: var(--shadow);
+}
+
+.login-logo {
+  border: 0;
+  background: transparent;
+}
+
+.login-brand h1 {
+  color: var(--text);
+}
+
+.login-brand p {
+  color: var(--muted);
+}
+
+.login-error {
+  border-color: #f0b4b4;
+  background: #fff2f2;
+  color: #a92f2f;
 }
 
 .dashboard-view,
@@ -937,9 +980,67 @@ td:first-child {
   color: var(--text);
 }
 
+.reports-tabs,
+.reports-period {
+  border-color: var(--line);
+  background: #ffffff;
+  box-shadow: var(--box-shadow);
+}
+
+.reports-tab {
+  color: var(--muted-strong);
+}
+
+.reports-tab:hover {
+  border-color: var(--line);
+  background: #f3f7fb;
+}
+
+.reports-tab--active {
+  border-color: var(--cyan);
+  background: var(--cyan);
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(15, 143, 158, 0.18);
+}
+
+.report-side-row {
+  border-color: var(--line);
+  background: #f8fafc;
+}
+
+.report-side-row span {
+  color: var(--muted);
+}
+
+.report-side-row strong,
+.report-money {
+  color: var(--cyan-soft);
+}
+
+.report-money--positive {
+  color: var(--green);
+}
+
+.report-money--negative {
+  color: var(--red);
+}
+
 @media (max-width: 1240px) {
   .dashboard-main-grid {
     grid-template-columns: 1fr;
+  }
+
+  .reports-toolbar,
+  .report-main-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .report-panel {
+    grid-row: auto;
+  }
+
+  .report-summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -989,6 +1090,15 @@ td:first-child {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .reports-toolbar,
+  .reports-period {
+    grid-template-columns: 1fr;
+  }
+
+  .report-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .table-wrap {
     border-radius: var(--radius-sm);
   }
@@ -1005,6 +1115,10 @@ td:first-child {
 
 @media (max-width: 560px) {
   .metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .report-summary-grid {
     grid-template-columns: 1fr;
   }
 

@@ -2,6 +2,11 @@ import { useEffect, useState } from "react";
 import { api } from "../services/api";
 import searchIcon from "../assets/icons/search.svg";
 
+const currencyFormatter = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL"
+});
+
 function createEmptyClienteForm() {
   return {
     nome: "",
@@ -68,8 +73,11 @@ export default function ClientesPage({
   const [loading, setLoading] = useState(false);
   const [clienteModalOpen, setClienteModalOpen] = useState(false);
   const [clienteDetailsOpen, setClienteDetailsOpen] = useState(false);
+  const [clienteRecordsOpen, setClienteRecordsOpen] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState(null);
   const [clienteForm, setClienteForm] = useState(createEmptyClienteForm);
+  const [clienteRecords, setClienteRecords] = useState({ ordens: [], vendas: [] });
+  const [recordsLoading, setRecordsLoading] = useState(false);
   const [savingCliente, setSavingCliente] = useState(false);
   const filteredClientes = filterClientes(clientes, search);
   const totalClientes = clientes.length;
@@ -157,6 +165,41 @@ export default function ClientesPage({
     setClienteDetailsOpen(false);
   }
 
+  async function openClienteRecords(cliente) {
+    setSelectedCliente(cliente);
+    setClienteRecords({ ordens: [], vendas: [] });
+    setClienteRecordsOpen(true);
+    setRecordsLoading(true);
+    notify(null);
+
+    try {
+      const [ordensData, vendasData] = await Promise.all([
+        api.get("/ordens-servico"),
+        api.get("/vendas")
+      ]);
+      const clienteId = String(cliente.idCliente);
+      const ordens = Array.isArray(ordensData)
+        ? ordensData.filter((ordem) => String(ordem.cliente?.idCliente) === clienteId)
+        : [];
+      const vendas = Array.isArray(vendasData)
+        ? vendasData.filter((venda) => String(venda.cliente?.idCliente) === clienteId)
+        : [];
+
+      setClienteRecords({ ordens, vendas });
+    } catch (error) {
+      notify({
+        type: "error",
+        message: error.message || "Nao foi possivel carregar os registros do cliente."
+      });
+    } finally {
+      setRecordsLoading(false);
+    }
+  }
+
+  function closeClienteRecords() {
+    setClienteRecordsOpen(false);
+  }
+
   async function handleClienteSubmit(event) {
     event.preventDefault();
     const formElement = event.currentTarget?.form || event.currentTarget;
@@ -212,12 +255,57 @@ export default function ClientesPage({
       notify({ type: "success", message: `Cliente ${cliente.nome} excluido com sucesso.` });
       await refreshClientes({ silent: true });
     } catch (error) {
+      if (error.status === 409) {
+        await handleClienteDeleteConflict(cliente);
+        return;
+      }
+
       notify({
         type: "error",
         message: error.message || "Nao foi possivel excluir o cliente. Verifique se ele possui OS ou vendas vinculadas."
       });
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleClienteDeleteConflict(cliente) {
+    if (!cliente.ativo) {
+      notify({
+        type: "error",
+        message: `Cliente ${cliente.nome} ja esta inativo e nao pode ser excluido porque possui historico vinculado.`
+      });
+      return;
+    }
+
+    const shouldInactivate = window.confirm(
+      `O cliente "${cliente.nome}" possui OS, vendas ou outros registros vinculados e nao pode ser excluido sem apagar historico.\n\nDeseja inativar este cliente?`
+    );
+
+    if (!shouldInactivate) {
+      notify({
+        type: "error",
+        message: "Exclusao cancelada. O cliente possui historico vinculado e foi mantido ativo."
+      });
+      return;
+    }
+
+    try {
+      const payload = buildClientePayload({
+        ...clienteToForm(cliente),
+        ativo: false
+      });
+      await api.put(`/clientes/${cliente.idCliente}`, payload);
+      notify({
+        type: "success",
+        message: `Cliente ${cliente.nome} possui historico vinculado, entao foi inativado com sucesso.`
+      });
+      await refreshClientes({ silent: true });
+    } catch (error) {
+      notify({
+        type: "error",
+        message: error.message || "Nao foi possivel inativar o cliente."
+      });
     }
   }
 
@@ -301,8 +389,8 @@ export default function ClientesPage({
                         <button type="button" className="table-action" onClick={() => openClienteDetails(cliente)}>
                           Ver
                         </button>
-                        <button type="button" className="table-action" onClick={() => openClienteEditModal(cliente)}>
-                          Editar
+                        <button type="button" className="table-action" onClick={() => openClienteRecords(cliente)}>
+                          Registros
                         </button>
                         <button type="button" className="table-action table-action--danger" onClick={() => handleClienteDelete(cliente)}>
                           Excluir
@@ -344,6 +432,15 @@ export default function ClientesPage({
             setClienteDetailsOpen(false);
             openClienteEditModal(selectedCliente);
           }}
+        />
+      ) : null}
+
+      {clienteRecordsOpen && selectedCliente ? (
+        <ClienteRecordsModal
+          cliente={selectedCliente}
+          records={clienteRecords}
+          loading={recordsLoading}
+          onClose={closeClienteRecords}
         />
       ) : null}
     </section>
@@ -467,6 +564,147 @@ function ClienteDetailsModal({ cliente, onClose, onEdit }) {
   );
 }
 
+function ClienteRecordsModal({ cliente, records, loading, onClose }) {
+  const totalServicos = records.ordens.reduce((total, ordem) => total + parseMoney(ordem.valorServico), 0);
+  const totalCompras = records.vendas.reduce((total, venda) => total + parseMoney(venda.valorTotal), 0);
+
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section className="entry-modal entry-modal--client-records" role="dialog" aria-modal="true" aria-labelledby="cliente-records-title">
+        <header className="entry-modal__header">
+          <div>
+            <span className="eyebrow">Historico do cliente</span>
+            <h2 id="cliente-records-title">Registros de {cliente.nome}</h2>
+            <p>Compras e servicos vinculados a este cadastro.</p>
+          </div>
+          <div className="entry-modal__actions">
+            <button type="button" className="modal-close" onClick={onClose} aria-label="Fechar">
+              x
+            </button>
+          </div>
+        </header>
+
+        <div className="entry-form client-records">
+          <div className="records-summary">
+            <article className="client-summary-card">
+              <span>Servicos</span>
+              <strong>{records.ordens.length}</strong>
+            </article>
+            <article className="client-summary-card client-summary-card--active">
+              <span>Total em servicos</span>
+              <strong>{currencyFormatter.format(totalServicos)}</strong>
+            </article>
+            <article className="client-summary-card">
+              <span>Compras</span>
+              <strong>{records.vendas.length}</strong>
+            </article>
+            <article className="client-summary-card client-summary-card--gold">
+              <span>Total em compras</span>
+              <strong>{currencyFormatter.format(totalCompras)}</strong>
+            </article>
+          </div>
+
+          {loading ? (
+            <div className="empty-state">Carregando registros...</div>
+          ) : (
+            <div className="records-grid">
+              <section className="records-section">
+                <div className="records-section__head">
+                  <h3>Servicos / Ordens de servico</h3>
+                  <span>{records.ordens.length} registro(s)</span>
+                </div>
+                {records.ordens.length ? (
+                  <div className="table-wrap">
+                    <table className="compact-table">
+                      <thead>
+                        <tr>
+                          <th>OS</th>
+                          <th>Equipamento</th>
+                          <th>Status</th>
+                          <th>Entrada</th>
+                          <th>Valor</th>
+                          <th>PDF</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {records.ordens.map((ordem) => (
+                          <tr key={ordem.idOrdemServico}>
+                            <td>#{formatRecordNumber(ordem.idOrdemServico)}</td>
+                            <td>{equipmentLabel(ordem.equipamento)}</td>
+                            <td>
+                              <span className={`status-badge status-badge--${statusTone(ordem.status)}`}>
+                                {humanizeStatus(ordem.status)}
+                              </span>
+                            </td>
+                            <td>{formatDate(ordem.dataEntrada)}</td>
+                            <td>{currencyFormatter.format(parseMoney(ordem.valorServico))}</td>
+                            <td>
+                              <button type="button" className="table-action" onClick={() => openServiceOrderPdf(ordem)}>
+                                PDF
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="empty-state">Nenhuma ordem de servico encontrada para este cliente.</div>
+                )}
+              </section>
+
+              <section className="records-section">
+                <div className="records-section__head">
+                  <h3>Compras / Vendas</h3>
+                  <span>{records.vendas.length} registro(s)</span>
+                </div>
+                {records.vendas.length ? (
+                  <div className="table-wrap">
+                    <table className="compact-table">
+                      <thead>
+                        <tr>
+                          <th>Venda</th>
+                          <th>Data</th>
+                          <th>Pagamento</th>
+                          <th>Valor</th>
+                          <th>PDF</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {records.vendas.map((venda) => (
+                          <tr key={venda.idVenda}>
+                            <td>#{formatRecordNumber(venda.idVenda)}</td>
+                            <td>{formatDate(venda.dataVenda)}</td>
+                            <td>{humanizeStatus(venda.formaPagamento)}</td>
+                            <td>{currencyFormatter.format(parseMoney(venda.valorTotal))}</td>
+                            <td>
+                              <button type="button" className="table-action" onClick={() => openSaleReceiptPdf(venda)}>
+                                PDF
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="empty-state">Nenhuma compra encontrada para este cliente.</div>
+                )}
+              </section>
+            </div>
+          )}
+
+          <footer className="entry-modal__footer">
+            <button type="button" className="ghost-button" onClick={onClose}>
+              Fechar
+            </button>
+          </footer>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function ClientePanel({ title, children }) {
   return (
     <article className="panel">
@@ -513,8 +751,83 @@ function formatDateTime(value) {
   return date.toLocaleDateString("pt-BR");
 }
 
+function formatDate(value) {
+  if (!value) {
+    return "Sem data";
+  }
+
+  return new Date(`${value}T00:00:00`).toLocaleDateString("pt-BR");
+}
+
+function formatRecordNumber(value) {
+  return String(value || 0).padStart(6, "0");
+}
+
 function formatClientNumber(value) {
   return String(value || 0).padStart(6, "0");
+}
+
+function parseMoney(value) {
+  const normalized = String(value || "0").replace(",", ".");
+  const number = Number(normalized);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function equipmentLabel(equipamento) {
+  if (!equipamento) {
+    return "Equipamento nao informado";
+  }
+
+  return [equipamento.marca, equipamento.tipoEquipamento, equipamento.modelo]
+    .filter(Boolean)
+    .join(" - ");
+}
+
+function statusTone(status) {
+  const normalized = String(status || "").toLowerCase();
+  if (normalized.includes("pronto") || normalized.includes("entregue")) {
+    return "green";
+  }
+
+  if (normalized.includes("aprovacao") || normalized.includes("analise") || normalized.includes("manutencao")) {
+    return "amber";
+  }
+
+  if (normalized.includes("cancel")) {
+    return "red";
+  }
+
+  return "blue";
+}
+
+function humanizeStatus(status) {
+  if (!status) {
+    return "Nao informado";
+  }
+
+  return String(status)
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function openServiceOrderPdf(ordem) {
+  const idOrdemServico = typeof ordem === "object" ? ordem?.idOrdemServico : ordem;
+  if (!idOrdemServico) {
+    return;
+  }
+
+  window.open(api.fileUrl(`/ordens-servico/${idOrdemServico}/pdf`), "_blank", "noopener,noreferrer");
+}
+
+function openSaleReceiptPdf(venda) {
+  const idVenda = typeof venda === "object" ? venda?.idVenda : venda;
+  if (!idVenda) {
+    return;
+  }
+
+  window.open(api.fileUrl(`/vendas/${idVenda}/pdf`), "_blank", "noopener,noreferrer");
 }
 
 function clienteInitials(cliente) {

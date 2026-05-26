@@ -19,8 +19,13 @@ CREATE TABLE IF NOT EXISTS produto (
     estoque_minimo INTEGER NOT NULL DEFAULT 0,
     valor_compra NUMERIC(12, 2) NOT NULL DEFAULT 0,
     valor_venda NUMERIC(12, 2) NOT NULL DEFAULT 0,
+    foto BYTEA,
+    foto_nome VARCHAR(180),
+    foto_tipo VARCHAR(80),
+    foto_tamanho INTEGER,
     ativo BOOLEAN NOT NULL DEFAULT TRUE,
-    data_cadastro TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    data_cadastro TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_produto_foto_tamanho CHECK (foto_tamanho IS NULL OR foto_tamanho <= 512000)
 );
 
 CREATE TABLE IF NOT EXISTS equipamento (

@@ -13,6 +13,10 @@ public class Produto {
     private int estoqueMinimo;
     private BigDecimal valorCompra;
     private BigDecimal valorVenda;
+    private boolean possuiFoto;
+    private String fotoNome;
+    private String fotoTipo;
+    private Integer fotoTamanho;
     private boolean ativo;
     private LocalDateTime dataCadastro;
 
@@ -78,6 +82,38 @@ public class Produto {
 
     public void setValorVenda(BigDecimal valorVenda) {
         this.valorVenda = valorVenda;
+    }
+
+    public boolean isPossuiFoto() {
+        return possuiFoto;
+    }
+
+    public void setPossuiFoto(boolean possuiFoto) {
+        this.possuiFoto = possuiFoto;
+    }
+
+    public String getFotoNome() {
+        return fotoNome;
+    }
+
+    public void setFotoNome(String fotoNome) {
+        this.fotoNome = fotoNome;
+    }
+
+    public String getFotoTipo() {
+        return fotoTipo;
+    }
+
+    public void setFotoTipo(String fotoTipo) {
+        this.fotoTipo = fotoTipo;
+    }
+
+    public Integer getFotoTamanho() {
+        return fotoTamanho;
+    }
+
+    public void setFotoTamanho(Integer fotoTamanho) {
+        this.fotoTamanho = fotoTamanho;
     }
 
     public boolean isAtivo() {

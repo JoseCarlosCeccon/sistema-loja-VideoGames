@@ -5,13 +5,14 @@ async function request(path, options = {}) {
   const { timeoutMs = DEFAULT_TIMEOUT_MS, ...fetchOptions } = options;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const isFormData = fetchOptions.body instanceof FormData;
 
   try {
     const response = await fetch(`${API_URL}${path}`, {
       ...fetchOptions,
       signal: controller.signal,
       headers: {
-        "Content-Type": "application/json",
+        ...(isFormData ? {} : { "Content-Type": "application/json" }),
         ...(fetchOptions.headers || {})
       }
     });
@@ -26,7 +27,10 @@ async function request(path, options = {}) {
 
     if (!response.ok) {
       const message = payload?.details || payload?.message || "Falha ao processar a requisicao.";
-      throw new Error(message);
+      const requestError = new Error(message);
+      requestError.status = response.status;
+      requestError.payload = payload;
+      throw requestError;
     }
 
     return payload;
@@ -62,6 +66,13 @@ export const api = {
     return request(path, {
       method: "PUT",
       body: JSON.stringify(body)
+    });
+  },
+  upload(path, formData) {
+    return request(path, {
+      method: "POST",
+      body: formData,
+      timeoutMs: 30000
     });
   },
   delete(path) {

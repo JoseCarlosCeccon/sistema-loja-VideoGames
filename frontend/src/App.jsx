@@ -1,15 +1,17 @@
 import { startTransition, useEffect, useLayoutEffect, useState } from "react";
 import { api } from "./services/api";
+import CaixaPage from "./pages/Caixa";
 import ClientesPage from "./pages/Clientes";
 import EquipamentosPage from "./pages/Equipamentos";
 import EstoquePage from "./pages/Estoque";
+import LoginPage from "./pages/Login";
+import RelatoriosPage from "./pages/Relatorios";
 import currentDesignCss from "./current-design.css?raw";
 import fundoPersonagensUrl from "./assets/images/FUNDO DE PERSONAGENS.jpg";
 import logoAcaoGames from "./assets/images/logo acao games.jpg";
 import arrowDownIcon from "./assets/icons/arrow-down-to-line.svg";
 import arrowUpIcon from "./assets/icons/arrow-up-from-line.svg";
 import banknoteIcon from "./assets/icons/banknote.svg";
-import bellIcon from "./assets/icons/bell.svg";
 import cartIcon from "./assets/icons/bootstrap_cart_plus.svg";
 import checkCircleIcon from "./assets/icons/check-circle.svg";
 import chevronRightIcon from "./assets/icons/chevron-right.svg";
@@ -151,12 +153,14 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
 });
 
 const currentDesignStyleId = "acao-games-current-design";
+const authStorageKey = "acao-games-auth-user";
 const currentDesignStyleContent = currentDesignCss.replace(
-  'url("./assets/images/FUNDO DE PERSONAGENS.jpg")',
+  /url\("\.\/assets\/images\/FUNDO DE PERSONAGENS\.jpg"\)/g,
   `url("${fundoPersonagensUrl}")`
 );
 
 function App() {
+  const [authUser, setAuthUser] = useState(() => readStoredUser());
   const [activeSection, setActiveSection] = useState("dashboard");
   const [themeMode, setThemeMode] = useState(() => {
     if (typeof window === "undefined") {
@@ -191,8 +195,13 @@ function App() {
   const [createdOrder, setCreatedOrder] = useState(null);
 
   useEffect(() => {
-    loadDashboard();
-  }, []);
+    if (authUser) {
+      loadDashboard();
+      return;
+    }
+
+    setLoading(false);
+  }, [authUser]);
 
   useLayoutEffect(() => {
     const existingStyle = document.getElementById(currentDesignStyleId);
@@ -248,6 +257,27 @@ function App() {
     }
   }
 
+  function handleAuthenticated(usuario) {
+    const sessionUser = sanitizeSessionUser(usuario);
+    if (!sessionUser) {
+      setFeedback({ type: "error", message: "Resposta de login invalida." });
+      return;
+    }
+
+    setAuthUser(sessionUser);
+    window.localStorage.setItem(authStorageKey, JSON.stringify(sessionUser));
+    setFeedback(null);
+  }
+
+  function handleLogout() {
+    window.localStorage.removeItem(authStorageKey);
+    setAuthUser(null);
+    setFeedback(null);
+    startTransition(() => {
+      setActiveSection("dashboard");
+    });
+  }
+
   function navigateToDashboard() {
     startTransition(() => {
       setActiveSection("dashboard");
@@ -287,6 +317,20 @@ function App() {
     setFeedback(null);
   }
 
+  function openCaixaPage() {
+    startTransition(() => {
+      setActiveSection("caixa");
+    });
+    setFeedback(null);
+  }
+
+  function openRelatoriosPage() {
+    startTransition(() => {
+      setActiveSection("relatorios");
+    });
+    setFeedback(null);
+  }
+
   function handleMenuItem(item) {
     if (item.id === "dashboard") {
       navigateToDashboard();
@@ -305,6 +349,16 @@ function App() {
 
     if (item.id === "produtos") {
       openEstoquePage();
+      return;
+    }
+
+    if (item.id === "caixa") {
+      openCaixaPage();
+      return;
+    }
+
+    if (item.id === "relatorios") {
+      openRelatoriosPage();
       return;
     }
 
@@ -633,7 +687,15 @@ function App() {
   const recentSales = dashboard.vendasRecentes?.length
     ? dashboard.vendasRecentes.slice(0, 5)
     : produtos.slice(0, 5);
-  const isStandalonePage = activeSection === "clientes" || activeSection === "equipamentos" || activeSection === "produtos";
+  const isStandalonePage = activeSection === "clientes"
+    || activeSection === "equipamentos"
+    || activeSection === "produtos"
+    || activeSection === "caixa"
+    || activeSection === "relatorios";
+
+  if (!authUser) {
+    return <LoginPage onAuthenticated={handleAuthenticated} />;
+  }
 
   return (
     <div className="app-shell">
@@ -643,7 +705,7 @@ function App() {
         </button>
 
         <nav className="top-nav" aria-label="Navegacao principal">
-          {navItems.slice(0, 5).map((item) => (
+          {navItems.slice(0, 6).map((item) => (
             <button
               key={item.id}
               type="button"
@@ -666,17 +728,16 @@ function App() {
             <span className={`theme-toggle-icon theme-toggle-icon--${themeMode === "light" ? "dark" : "light"}`} aria-hidden="true" />
             {themeMode === "light" ? "Tema escuro" : "Tema claro"}
           </button>
-          <button type="button" className="icon-button" aria-label="Notificacoes">
-            <SvgIcon src={bellIcon} size={15} />
-            <span className="notification-dot" />
-          </button>
-          <button type="button" className="header-link" onClick={() => showFutureScreen("relatorios", "Relatorios")}>
-            <SvgIcon src={graphIcon} size={15} />
-            Relatorios
-          </button>
           <button type="button" className="header-link" onClick={() => showFutureScreen("configuracoes", "Configuracoes")}>
             <SvgIcon src={settingsIcon} size={15} />
             Configuracoes
+          </button>
+          <div className="header-user-chip">
+            <span>{authUser.nome || authUser.login}</span>
+            <small>{humanizeStatus(authUser.perfil)}</small>
+          </div>
+          <button type="button" className="header-link" onClick={handleLogout}>
+            Sair
           </button>
           <button type="button" className="icon-button" aria-label="Ajuda">
             <SvgIcon src={helpCircleIcon} size={15} />
@@ -715,6 +776,19 @@ function App() {
           <EstoquePage
             produtos={produtos}
             onProdutosChange={setProdutos}
+            onFeedback={setFeedback}
+          />
+        ) : null}
+
+        {activeSection === "caixa" ? (
+          <CaixaPage
+            onFeedback={setFeedback}
+            onDashboardRefresh={loadDashboard}
+          />
+        ) : null}
+
+        {activeSection === "relatorios" ? (
+          <RelatoriosPage
             onFeedback={setFeedback}
           />
         ) : null}
@@ -1592,6 +1666,34 @@ function todayIsoDate() {
 function optionalText(value) {
   const text = String(value || "").trim();
   return text.length ? text : null;
+}
+
+function readStoredUser() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const stored = window.localStorage.getItem(authStorageKey);
+    return stored ? sanitizeSessionUser(JSON.parse(stored)) : null;
+  } catch {
+    window.localStorage.removeItem(authStorageKey);
+    return null;
+  }
+}
+
+function sanitizeSessionUser(usuario) {
+  if (!usuario) {
+    return null;
+  }
+
+  return {
+    idUsuario: usuario.idUsuario,
+    nome: usuario.nome || "",
+    login: usuario.login || "",
+    perfil: usuario.perfil || "",
+    ativo: usuario.ativo !== false
+  };
 }
 
 export default App;

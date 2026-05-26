@@ -1,5 +1,6 @@
 package com.acaogames.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.LocalDateTime;
 
 public class UsuarioSistema {
@@ -36,6 +37,7 @@ public class UsuarioSistema {
         this.login = login;
     }
 
+    @JsonIgnore
     public String getSenha() {
         return senha;
     }

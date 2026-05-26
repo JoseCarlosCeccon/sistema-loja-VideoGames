@@ -4,6 +4,7 @@ import com.acaogames.backend.dto.LoginRequest;
 import com.acaogames.backend.dto.UsuarioSistemaRequest;
 import com.acaogames.backend.exception.BadRequestException;
 import com.acaogames.backend.exception.ResourceNotFoundException;
+import com.acaogames.backend.exception.UnauthorizedException;
 import com.acaogames.backend.model.UsuarioSistema;
 import com.acaogames.backend.repository.UsuarioSistemaRepository;
 import java.util.Arrays;
@@ -56,10 +57,10 @@ public class UsuarioSistemaService {
 
     public UsuarioSistema login(LoginRequest request) {
         UsuarioSistema usuario = usuarioSistemaRepository.findByLogin(request.getLogin())
-                .orElseThrow(notFound("Usuario ou senha invalidos."));
+                .orElseThrow(unauthorized("Usuario ou senha invalidos."));
 
         if (!usuario.isAtivo() || !usuario.getSenha().equals(request.getSenha())) {
-            throw new BadRequestException("Usuario ou senha invalidos.");
+            throw new UnauthorizedException("Usuario ou senha invalidos.");
         }
 
         return usuario;
@@ -86,6 +87,15 @@ public class UsuarioSistemaService {
             @Override
             public ResourceNotFoundException get() {
                 return new ResourceNotFoundException(message);
+            }
+        };
+    }
+
+    private java.util.function.Supplier<UnauthorizedException> unauthorized(final String message) {
+        return new java.util.function.Supplier<UnauthorizedException>() {
+            @Override
+            public UnauthorizedException get() {
+                return new UnauthorizedException(message);
             }
         };
     }

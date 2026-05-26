@@ -1,6 +1,7 @@
 package com.acaogames.backend.repository;
 
 import com.acaogames.backend.model.Produto;
+import com.acaogames.backend.model.ProdutoFoto;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -18,6 +19,10 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class ProdutoRepository {
 
+    private static final String BASE_SELECT = "SELECT id_produto, nome, categoria, descricao, quantidade_estoque, "
+            + "estoque_minimo, valor_compra, valor_venda, ativo, data_cadastro, "
+            + "(foto IS NOT NULL) AS possui_foto, foto_nome, foto_tipo, foto_tamanho FROM produto ";
+
     private final NamedParameterJdbcTemplate jdbcTemplate;
 
     public ProdutoRepository(NamedParameterJdbcTemplate jdbcTemplate) {
@@ -25,12 +30,12 @@ public class ProdutoRepository {
     }
 
     public List<Produto> findAll() {
-        return jdbcTemplate.query("SELECT * FROM produto ORDER BY nome", rowMapper());
+        return jdbcTemplate.query(BASE_SELECT + "ORDER BY nome", rowMapper());
     }
 
     public Optional<Produto> findById(Long idProduto) {
         List<Produto> produtos = jdbcTemplate.query(
-                "SELECT * FROM produto WHERE id_produto = :idProduto",
+                BASE_SELECT + "WHERE id_produto = :idProduto",
                 new MapSqlParameterSource("idProduto", idProduto),
                 rowMapper()
         );
@@ -67,6 +72,51 @@ public class ProdutoRepository {
                 "DELETE FROM produto WHERE id_produto = :idProduto",
                 new MapSqlParameterSource("idProduto", idProduto)
         );
+    }
+
+    public void updateFoto(Long idProduto, byte[] foto, String nome, String tipo, int tamanho) {
+        jdbcTemplate.update(
+                "UPDATE produto SET foto = :foto, foto_nome = :fotoNome, foto_tipo = :fotoTipo, "
+                        + "foto_tamanho = :fotoTamanho WHERE id_produto = :idProduto",
+                new MapSqlParameterSource()
+                        .addValue("idProduto", idProduto)
+                        .addValue("foto", foto)
+                        .addValue("fotoNome", nome)
+                        .addValue("fotoTipo", tipo)
+                        .addValue("fotoTamanho", tamanho)
+        );
+    }
+
+    public void deleteFoto(Long idProduto) {
+        jdbcTemplate.update(
+                "UPDATE produto SET foto = NULL, foto_nome = NULL, foto_tipo = NULL, foto_tamanho = NULL "
+                        + "WHERE id_produto = :idProduto",
+                new MapSqlParameterSource("idProduto", idProduto)
+        );
+    }
+
+    public Optional<ProdutoFoto> findFotoById(Long idProduto) {
+        List<ProdutoFoto> fotos = jdbcTemplate.query(
+                "SELECT foto, foto_nome, foto_tipo, foto_tamanho FROM produto WHERE id_produto = :idProduto "
+                        + "AND foto IS NOT NULL",
+                new MapSqlParameterSource("idProduto", idProduto),
+                new RowMapper<ProdutoFoto>() {
+                    @Override
+                    public ProdutoFoto mapRow(ResultSet rs, int rowNum) throws SQLException {
+                        ProdutoFoto foto = new ProdutoFoto();
+                        byte[] conteudo = rs.getBytes("foto");
+                        foto.setConteudo(conteudo);
+                        foto.setNome(rs.getString("foto_nome"));
+                        foto.setTipo(rs.getString("foto_tipo"));
+                        foto.setTamanho(rs.getInt("foto_tamanho"));
+                        if (rs.wasNull() && conteudo != null) {
+                            foto.setTamanho(conteudo.length);
+                        }
+                        return foto;
+                    }
+                }
+        );
+        return fotos.stream().findFirst();
     }
 
     public long countAll() {
@@ -136,6 +186,11 @@ public class ProdutoRepository {
                 produto.setEstoqueMinimo(rs.getInt("estoque_minimo"));
                 produto.setValorCompra(rs.getBigDecimal("valor_compra"));
                 produto.setValorVenda(rs.getBigDecimal("valor_venda"));
+                produto.setPossuiFoto(rs.getBoolean("possui_foto"));
+                produto.setFotoNome(rs.getString("foto_nome"));
+                produto.setFotoTipo(rs.getString("foto_tipo"));
+                int fotoTamanho = rs.getInt("foto_tamanho");
+                produto.setFotoTamanho(rs.wasNull() ? null : Integer.valueOf(fotoTamanho));
                 produto.setAtivo(rs.getBoolean("ativo"));
                 produto.setDataCadastro(toLocalDateTime(rs.getTimestamp("data_cadastro")));
                 return produto;

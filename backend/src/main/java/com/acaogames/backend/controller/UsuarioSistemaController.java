@@ -1,6 +1,7 @@
 package com.acaogames.backend.controller;
 
 import com.acaogames.backend.dto.LoginRequest;
+import com.acaogames.backend.dto.LoginResponse;
 import com.acaogames.backend.dto.UsuarioSistemaRequest;
 import com.acaogames.backend.model.UsuarioSistema;
 import com.acaogames.backend.service.UsuarioSistemaService;
@@ -55,7 +56,7 @@ public class UsuarioSistemaController {
     }
 
     @PostMapping("/login")
-    public UsuarioSistema login(@Valid @RequestBody LoginRequest request) {
-        return usuarioSistemaService.login(request);
+    public LoginResponse login(@Valid @RequestBody LoginRequest request) {
+        return LoginResponse.from(usuarioSistemaService.login(request));
     }
 }
