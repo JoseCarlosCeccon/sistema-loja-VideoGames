@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../services/api";
 import arrowDownIcon from "../assets/icons/arrow-down-to-line.svg";
 import fileTextIcon from "../assets/icons/file-text.svg";
@@ -9,6 +9,8 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   currency: "BRL"
 });
 
+const numberFormatter = new Intl.NumberFormat("pt-BR");
+
 const reportTabs = [
   { id: "caixa", label: "Caixa" },
   { id: "vendas", label: "Vendas" },
@@ -17,18 +19,15 @@ const reportTabs = [
   { id: "clientes", label: "Clientes" }
 ];
 
-const STALE_ORDER_DAYS = 7;
-
-function createEmptyReportData() {
-  return {
-    movimentos: [],
-    vendas: [],
-    ordens: [],
-    produtos: [],
-    clientes: [],
-    movimentacoesEstoque: []
-  };
-}
+const emptyReport = {
+  columns: [],
+  rows: [],
+  summary: {},
+  page: 0,
+  size: 20,
+  totalElements: 0,
+  totalPages: 0
+};
 
 export default function RelatoriosPage({ onFeedback }) {
   const [activeReport, setActiveReport] = useState("caixa");
@@ -37,17 +36,14 @@ export default function RelatoriosPage({ onFeedback }) {
     end: todayIsoDate()
   }));
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
   const [loading, setLoading] = useState(false);
-  const [reportData, setReportData] = useState(createEmptyReportData);
+  const [report, setReport] = useState(emptyReport);
 
   useEffect(() => {
-    refreshReports();
-  }, []);
-
-  const reportContext = useMemo(
-    () => buildReportContext(reportData, period, search),
-    [reportData, period, search]
-  );
+    refreshReport();
+  }, [activeReport, period.start, period.end, search, page, pageSize]);
 
   function notify(feedback) {
     if (onFeedback) {
@@ -55,39 +51,33 @@ export default function RelatoriosPage({ onFeedback }) {
     }
   }
 
-  async function refreshReports() {
+  async function refreshReport() {
     setLoading(true);
     notify(null);
 
     try {
-      const [
-        movimentosData,
-        vendasData,
-        ordensData,
-        produtosData,
-        clientesData,
-        movimentacoesData
-      ] = await Promise.all([
-        api.get("/movimentos-caixa"),
-        api.get("/vendas"),
-        api.get("/ordens-servico"),
-        api.get("/produtos"),
-        api.get("/clientes"),
-        api.get("/movimentacoes-estoque")
-      ]);
-
-      setReportData({
-        movimentos: Array.isArray(movimentosData) ? movimentosData : [],
-        vendas: Array.isArray(vendasData) ? vendasData : [],
-        ordens: Array.isArray(ordensData) ? ordensData : [],
-        produtos: Array.isArray(produtosData) ? produtosData : [],
-        clientes: Array.isArray(clientesData) ? clientesData : [],
-        movimentacoesEstoque: Array.isArray(movimentacoesData) ? movimentacoesData : []
+      const params = new URLSearchParams({
+        page: String(page),
+        size: String(pageSize)
       });
+
+      if (period.start) {
+        params.set("inicio", period.start);
+      }
+      if (period.end) {
+        params.set("fim", period.end);
+      }
+      if (search.trim()) {
+        params.set("busca", search.trim());
+      }
+
+      const data = await api.get(`/relatorios/${activeReport}?${params.toString()}`);
+      setReport({ ...emptyReport, ...(data || {}) });
     } catch (error) {
+      setReport(emptyReport);
       notify({
         type: "error",
-        message: error.message || "Nao foi possivel carregar os relatorios."
+        message: error.message || "Nao foi possivel carregar o relatorio."
       });
     } finally {
       setLoading(false);
@@ -95,15 +85,30 @@ export default function RelatoriosPage({ onFeedback }) {
   }
 
   function updatePeriod(field, value) {
+    setPage(0);
     setPeriod((current) => ({
       ...current,
       [field]: value
     }));
   }
 
+  function selectReport(reportId) {
+    setPage(0);
+    setActiveReport(reportId);
+  }
+
+  function updateSearch(value) {
+    setPage(0);
+    setSearch(value);
+  }
+
+  function updatePageSize(value) {
+    setPage(0);
+    setPageSize(Number(value));
+  }
+
   function handleExportCsv() {
-    const exportData = getExportData(activeReport, reportContext);
-    const csv = toCsv(exportData.headers, exportData.rows);
+    const csv = toCsv(report.columns || [], report.rows || []);
     const blob = new Blob(["\ufeff", csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -117,27 +122,23 @@ export default function RelatoriosPage({ onFeedback }) {
     notify({ type: "success", message: "Relatorio exportado em CSV." });
   }
 
-  function handlePrint() {
-    window.print();
-  }
-
   return (
     <section className="management-page reports-page" aria-labelledby="reports-title">
       <div className="management-hero reports-hero">
         <div>
           <span className="section-label">Analise operacional</span>
           <h1 id="reports-title">Relatorios</h1>
-          <p>Fechamentos por periodo para caixa, vendas, ordens, estoque e clientes.</p>
+          <p>Fechamentos por periodo com busca e paginacao direto na API.</p>
         </div>
         <div className="management-actions reports-actions">
-          <button type="button" className="ghost-button" onClick={refreshReports} disabled={loading}>
+          <button type="button" className="ghost-button" onClick={refreshReport} disabled={loading}>
             {loading ? "Atualizando..." : "Atualizar"}
           </button>
           <button type="button" className="secondary-button reports-action-button" onClick={handleExportCsv}>
             <SvgIcon src={arrowDownIcon} size={15} />
             CSV
           </button>
-          <button type="button" className="primary-button reports-action-button" onClick={handlePrint}>
+          <button type="button" className="primary-button reports-action-button" onClick={() => window.print()}>
             <SvgIcon src={fileTextIcon} size={15} />
             Imprimir / PDF
           </button>
@@ -153,7 +154,7 @@ export default function RelatoriosPage({ onFeedback }) {
               role="tab"
               aria-selected={activeReport === tab.id}
               className={activeReport === tab.id ? "reports-tab reports-tab--active" : "reports-tab"}
-              onClick={() => setActiveReport(tab.id)}
+              onClick={() => selectReport(tab.id)}
             >
               {tab.label}
             </button>
@@ -176,354 +177,100 @@ export default function RelatoriosPage({ onFeedback }) {
           <input
             type="search"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => updateSearch(event.target.value)}
             placeholder="Buscar no relatorio atual..."
           />
         </label>
       </section>
 
-      {loading ? (
-        <div className="empty-state">Carregando relatorios...</div>
-      ) : (
-        renderReport(activeReport, reportContext)
-      )}
+      <ReportSummary summary={report.summary || {}} />
+
+      <section className="panel report-panel">
+        <div className="panel-head">
+          <h2>{currentReportLabel(activeReport)}</h2>
+          <span className="report-count">{numberFormatter.format(report.totalElements || 0)} registros</span>
+        </div>
+
+        {loading ? (
+          <div className="empty-state">Carregando relatorio...</div>
+        ) : (
+          <ReportTable columns={report.columns || []} rows={report.rows || []} />
+        )}
+      </section>
+
+      <footer className="reports-pagination">
+        <button type="button" className="ghost-button" onClick={() => setPage((current) => Math.max(0, current - 1))} disabled={page <= 0 || loading}>
+          Anterior
+        </button>
+        <span>
+          Pagina {numberFormatter.format((report.page || 0) + 1)} de {numberFormatter.format(Math.max(report.totalPages || 1, 1))}
+        </span>
+        <button
+          type="button"
+          className="ghost-button"
+          onClick={() => setPage((current) => current + 1)}
+          disabled={loading || (report.totalPages || 0) <= page + 1}
+        >
+          Proxima
+        </button>
+        <label className="field reports-page-size">
+          <span>Itens</span>
+          <select value={pageSize} onChange={(event) => updatePageSize(event.target.value)}>
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </label>
+      </footer>
     </section>
   );
 }
 
-function renderReport(activeReport, context) {
-  if (activeReport === "vendas") {
-    return <VendasReport report={context.vendas} />;
+function ReportSummary({ summary }) {
+  const entries = Object.entries(summary);
+  if (!entries.length) {
+    return null;
   }
 
-  if (activeReport === "ordens") {
-    return <OrdensReport report={context.ordens} />;
+  return (
+    <section className="report-summary-grid" aria-label="Resumo do relatorio">
+      {entries.map(([key, value]) => (
+        <article key={key} className="report-summary-card">
+          <span>{humanizeLabel(key)}</span>
+          <strong>{formatSummaryValue(key, value)}</strong>
+        </article>
+      ))}
+    </section>
+  );
+}
+
+function ReportTable({ columns, rows }) {
+  if (!rows.length) {
+    return <div className="empty-state">Nenhum registro encontrado para os filtros atuais.</div>;
   }
 
-  if (activeReport === "estoque") {
-    return <EstoqueReport report={context.estoque} />;
-  }
-
-  if (activeReport === "clientes") {
-    return <ClientesReport report={context.clientes} />;
-  }
-
-  return <CaixaReport report={context.caixa} />;
-}
-
-function CaixaReport({ report }) {
   return (
-    <>
-      <section className="report-summary-grid" aria-label="Resumo do caixa">
-        <SummaryCard label="Entradas" value={currencyFormatter.format(report.entradas)} tone="active" />
-        <SummaryCard label="Saidas" value={currencyFormatter.format(report.saidas)} tone="muted" />
-        <SummaryCard label="Saldo" value={currencyFormatter.format(report.saldo)} tone={report.saldo < 0 ? "muted" : "gold"} />
-        <SummaryCard label="Movimentos" value={report.rows.length} />
-      </section>
-
-      <section className="report-main-grid">
-        <ReportPanel title="Movimentos de caixa">
-          <div className="table-wrap">
-            <table className="compact-table clients-table reports-table">
-              <thead>
-                <tr>
-                  <th>Data</th>
-                  <th>Tipo</th>
-                  <th>Categoria</th>
-                  <th>Descricao</th>
-                  <th>Pagamento</th>
-                  <th>Vinculo</th>
-                  <th>Valor</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.rows.length ? report.rows.map((movimento) => (
-                  <tr key={movimento.idMovimentoCaixa}>
-                    <td>{formatDateTime(movimento.dataMovimento)}</td>
-                    <td>{humanizeLabel(movimento.tipo)}</td>
-                    <td>{humanizeLabel(movimento.categoria)}</td>
-                    <td>{movimento.descricao || "Nao informado"}</td>
-                    <td>{humanizePayment(movimento.formaPagamento)}</td>
-                    <td>{movementLinkLabel(movimento)}</td>
-                    <td className={isEntrada(movimento) ? "report-money report-money--positive" : "report-money report-money--negative"}>
-                      {isEntrada(movimento) ? "+" : "-"}{currencyFormatter.format(parseMoney(movimento.valor))}
-                    </td>
-                  </tr>
-                )) : (
-                  <tr>
-                    <td colSpan="7">Nenhum movimento encontrado no periodo.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </ReportPanel>
-
-        <ReportSidePanel title="Por forma de pagamento" rows={report.payments} valueFormatter={currencyFormatter.format} />
-        <ReportSidePanel title="Por categoria" rows={report.categories} valueFormatter={currencyFormatter.format} />
-      </section>
-    </>
-  );
-}
-
-function VendasReport({ report }) {
-  return (
-    <>
-      <section className="report-summary-grid" aria-label="Resumo de vendas">
-        <SummaryCard label="Total vendido" value={currencyFormatter.format(report.total)} tone="active" />
-        <SummaryCard label="Vendas" value={report.rows.length} />
-        <SummaryCard label="Ticket medio" value={currencyFormatter.format(report.ticketMedio)} tone="gold" />
-        <SummaryCard label="Itens vendidos" value={report.itensVendidos} />
-      </section>
-
-      <section className="report-main-grid">
-        <ReportPanel title="Vendas no periodo">
-          <div className="table-wrap">
-            <table className="compact-table clients-table reports-table">
-              <thead>
-                <tr>
-                  <th>Venda</th>
-                  <th>Data</th>
-                  <th>Cliente</th>
-                  <th>Pagamento</th>
-                  <th>Itens</th>
-                  <th>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.rows.length ? report.rows.map((venda) => (
-                  <tr key={venda.idVenda}>
-                    <td>#{formatNumber(venda.idVenda)}</td>
-                    <td>{formatDate(venda.dataVenda)}</td>
-                    <td>{venda.clienteNome || "Venda balcao"}</td>
-                    <td>{humanizePayment(venda.formaPagamento)}</td>
-                    <td>{countVendaItems(venda)}</td>
-                    <td className="report-money">{currencyFormatter.format(parseMoney(venda.valorTotal))}</td>
-                  </tr>
-                )) : (
-                  <tr>
-                    <td colSpan="6">Nenhuma venda encontrada no periodo.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </ReportPanel>
-
-        <ReportSidePanel title="Formas de pagamento" rows={report.payments} valueFormatter={currencyFormatter.format} />
-        <ReportSidePanel title="Produtos mais vendidos" rows={report.topProducts} valueFormatter={(value) => `${value} un.`} />
-      </section>
-    </>
-  );
-}
-
-function OrdensReport({ report }) {
-  return (
-    <>
-      <section className="report-summary-grid" aria-label="Resumo de ordens de servico">
-        <SummaryCard label="Abertas" value={report.abertas} />
-        <SummaryCard label="Prontas" value={report.prontas} tone="gold" />
-        <SummaryCard label="Entregues" value={report.entregues} tone="active" />
-        <SummaryCard label="Paradas 7d+" value={report.paradas} tone={report.paradas ? "muted" : undefined} />
-        <SummaryCard label="Valor aberto" value={currencyFormatter.format(report.valorAberto)} />
-      </section>
-
-      <section className="report-main-grid">
-        <ReportPanel title="Ordens de servico">
-          <div className="table-wrap">
-            <table className="compact-table clients-table reports-table">
-              <thead>
-                <tr>
-                  <th>OS</th>
-                  <th>Cliente</th>
-                  <th>Equipamento</th>
-                  <th>Status</th>
-                  <th>Entrada</th>
-                  <th>Idade</th>
-                  <th>Valor</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.rows.length ? report.rows.map((ordem) => (
-                  <tr key={ordem.idOrdemServico}>
-                    <td>#{formatNumber(ordem.idOrdemServico)}</td>
-                    <td>{ordem.cliente?.nome || "Cliente nao informado"}</td>
-                    <td>{equipmentLabel(ordem.equipamento)}</td>
-                    <td>{humanizeStatus(ordem.status)}</td>
-                    <td>{formatDate(ordem.dataEntrada)}</td>
-                    <td>{orderAgeLabel(ordem)}</td>
-                    <td className="report-money">{currencyFormatter.format(parseMoney(ordem.valorServico))}</td>
-                  </tr>
-                )) : (
-                  <tr>
-                    <td colSpan="7">Nenhuma OS encontrada no periodo.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </ReportPanel>
-
-        <ReportSidePanel title="Status das OS" rows={report.statusRows} valueFormatter={(value) => `${value}`} />
-        <ReportSidePanel title="OS paradas" rows={report.staleRows} valueFormatter={(value) => `${value} dias`} />
-      </section>
-    </>
-  );
-}
-
-function EstoqueReport({ report }) {
-  return (
-    <>
-      <section className="report-summary-grid" aria-label="Resumo de estoque">
-        <SummaryCard label="Produtos" value={report.rows.length} />
-        <SummaryCard label="Ativos" value={report.ativos} tone="active" />
-        <SummaryCard label="Estoque baixo" value={report.baixo} tone={report.baixo ? "muted" : undefined} />
-        <SummaryCard label="Zerados" value={report.zerados} tone={report.zerados ? "muted" : undefined} />
-        <SummaryCard label="Valor estoque" value={currencyFormatter.format(report.valorTotal)} tone="gold" />
-      </section>
-
-      <section className="report-main-grid">
-        <ReportPanel title="Posicao atual do estoque">
-          <div className="table-wrap">
-            <table className="compact-table clients-table reports-table">
-              <thead>
-                <tr>
-                  <th>Produto</th>
-                  <th>Categoria</th>
-                  <th>Qtd</th>
-                  <th>Minimo</th>
-                  <th>Venda</th>
-                  <th>Total</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.rows.length ? report.rows.map((produto) => (
-                  <tr key={produto.idProduto}>
-                    <td>{produto.nome}</td>
-                    <td>{produto.categoria || "Nao informado"}</td>
-                    <td>{produto.quantidadeEstoque || 0}</td>
-                    <td>{produto.estoqueMinimo || 0}</td>
-                    <td>{currencyFormatter.format(parseMoney(produto.valorVenda))}</td>
-                    <td className="report-money">{currencyFormatter.format(productStockValue(produto))}</td>
-                    <td>{stockStatus(produto)}</td>
-                  </tr>
-                )) : (
-                  <tr>
-                    <td colSpan="7">Nenhum produto encontrado.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </ReportPanel>
-
-        <ReportSidePanel title="Movimentacoes no periodo" rows={report.movementsByProduct} valueFormatter={(value) => `${value} un.`} />
-        <ReportSidePanel title="Resumo de movimentos" rows={report.movementsSummary} valueFormatter={(value) => `${value} un.`} />
-      </section>
-    </>
-  );
-}
-
-function ClientesReport({ report }) {
-  return (
-    <>
-      <section className="report-summary-grid" aria-label="Resumo de clientes">
-        <SummaryCard label="Clientes" value={report.rows.length} />
-        <SummaryCard label="Ativos" value={report.ativos} tone="active" />
-        <SummaryCard label="Inativos" value={report.inativos} tone={report.inativos ? "muted" : undefined} />
-        <SummaryCard label="Atendidos" value={report.atendidos} tone="gold" />
-        <SummaryCard label="Receita vinculada" value={currencyFormatter.format(report.receita)} />
-      </section>
-
-      <section className="report-main-grid">
-        <ReportPanel title="Clientes no periodo">
-          <div className="table-wrap">
-            <table className="compact-table clients-table reports-table">
-              <thead>
-                <tr>
-                  <th>Cliente</th>
-                  <th>Telefone</th>
-                  <th>Status</th>
-                  <th>OS</th>
-                  <th>Vendas</th>
-                  <th>Servicos</th>
-                  <th>Compras</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.rows.length ? report.rows.map((cliente) => (
-                  <tr key={cliente.idCliente}>
-                    <td>{cliente.nome}</td>
-                    <td>{cliente.telefone || "Nao informado"}</td>
-                    <td>{cliente.ativo ? "Ativo" : "Inativo"}</td>
-                    <td>{cliente.totalOrdens}</td>
-                    <td>{cliente.totalVendas}</td>
-                    <td>{currencyFormatter.format(cliente.valorServicos)}</td>
-                    <td className="report-money">{currencyFormatter.format(cliente.valorVendas)}</td>
-                  </tr>
-                )) : (
-                  <tr>
-                    <td colSpan="7">Nenhum cliente encontrado.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </ReportPanel>
-
-        <ReportSidePanel title="Clientes por receita" rows={report.topClientes} valueFormatter={currencyFormatter.format} />
-        <ReportSidePanel title="Clientes por OS" rows={report.topOrdens} valueFormatter={(value) => `${value}`} />
-      </section>
-    </>
-  );
-}
-
-function ReportPanel({ title, children }) {
-  return (
-    <article className="panel report-panel">
-      <div className="panel-head">
-        <h2>{title}</h2>
-      </div>
-      {children}
-    </article>
-  );
-}
-
-function ReportSidePanel({ title, rows, valueFormatter }) {
-  return (
-    <article className="panel report-side-panel">
-      <div className="panel-head">
-        <h2>{title}</h2>
-      </div>
-      <div className="report-side-list">
-        {rows.length ? rows.map((row) => (
-          <div className="report-side-row" key={row.label}>
-            <span>{row.label}</span>
-            <strong>{valueFormatter(row.value)}</strong>
-          </div>
-        )) : (
-          <div className="empty-state">Sem dados para exibir.</div>
-        )}
-      </div>
-    </article>
-  );
-}
-
-function SummaryCard({ label, value, tone }) {
-  const toneClass = tone === "active"
-    ? "client-summary-card--active"
-    : tone === "muted"
-    ? "client-summary-card--muted"
-    : tone === "gold"
-    ? "client-summary-card--gold"
-    : "";
-
-  return (
-    <article className={`client-summary-card ${toneClass}`}>
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </article>
+    <div className="table-wrap">
+      <table className="compact-table clients-table">
+        <thead>
+          <tr>
+            {columns.map((column) => (
+              <th key={column.key}>{column.label}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, index) => (
+            <tr key={row.id || index}>
+              {columns.map((column) => (
+                <td key={column.key}>{formatCellValue(row[column.key], column.type)}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -540,560 +287,89 @@ function SvgIcon({ src, size = 18 }) {
   );
 }
 
-function buildReportContext(data, period, search) {
-  const clientesById = createIdMap(data.clientes, "idCliente");
-  const produtosById = createIdMap(data.produtos, "idProduto");
-  const movimentosPeriod = data.movimentos.filter((movimento) => isInPeriod(movimento.dataMovimento, period));
-  const vendasPeriod = data.vendas.filter((venda) => isInPeriod(venda.dataVenda, period));
-  const ordensPeriod = data.ordens.filter((ordem) => isInPeriod(ordem.dataEntrada, period));
-  const movimentacoesPeriod = data.movimentacoesEstoque.filter((movimentacao) => (
-    isInPeriod(movimentacao.dataMovimentacao, period)
+function toCsv(columns, rows) {
+  const header = columns.map((column) => escapeCsv(column.label)).join(";");
+  const body = rows.map((row) => (
+    columns.map((column) => escapeCsv(formatCellValue(row[column.key], column.type))).join(";")
   ));
-
-  return {
-    caixa: buildCaixaReport(movimentosPeriod, search),
-    vendas: buildVendasReport(vendasPeriod, search, clientesById, produtosById),
-    ordens: buildOrdensReport(ordensPeriod, search),
-    estoque: buildEstoqueReport(data.produtos, movimentacoesPeriod, search, produtosById),
-    clientes: buildClientesReport(data.clientes, vendasPeriod, ordensPeriod, search)
-  };
+  return [header, ...body].join("\n");
 }
 
-function buildCaixaReport(movimentos, search) {
-  const rows = movimentos.filter((movimento) => matchesSearch([
-    movimento.idMovimentoCaixa,
-    movimento.tipo,
-    movimento.categoria,
-    movimento.descricao,
-    movimento.formaPagamento,
-    movimento.venda?.idVenda ? `venda ${movimento.venda.idVenda}` : "",
-    movimento.ordemServico?.idOrdemServico ? `os ${movimento.ordemServico.idOrdemServico}` : ""
-  ], search));
-
-  const entradas = sum(rows.filter(isEntrada), "valor");
-  const saidas = sum(rows.filter((movimento) => !isEntrada(movimento)), "valor");
-
-  return {
-    rows,
-    entradas,
-    saidas,
-    saldo: entradas - saidas,
-    payments: groupMoneyRows(rows, (movimento) => humanizePayment(movimento.formaPagamento), (movimento) => signedMovementValue(movimento)),
-    categories: groupMoneyRows(rows, (movimento) => humanizeLabel(movimento.categoria), (movimento) => signedMovementValue(movimento))
-  };
-}
-
-function buildVendasReport(vendas, search, clientesById, produtosById) {
-  const enriched = vendas.map((venda) => {
-    const clienteId = venda.cliente?.idCliente;
-    const cliente = clienteId ? clientesById.get(String(clienteId)) : null;
-
-    return {
-      ...venda,
-      clienteNome: cliente?.nome || venda.cliente?.nome || ""
-    };
-  });
-
-  const rows = enriched.filter((venda) => matchesSearch([
-    venda.idVenda,
-    venda.clienteNome,
-    venda.formaPagamento,
-    venda.valorTotal,
-    ...(venda.itens || []).map((item) => productName(item.produto?.idProduto, produtosById))
-  ], search));
-
-  const total = sum(rows, "valorTotal");
-  const itensVendidos = rows.reduce((totalItens, venda) => totalItens + countVendaItems(venda), 0);
-
-  return {
-    rows,
-    total,
-    itensVendidos,
-    ticketMedio: rows.length ? total / rows.length : 0,
-    payments: groupMoneyRows(rows, (venda) => humanizePayment(venda.formaPagamento), (venda) => parseMoney(venda.valorTotal)),
-    topProducts: topProductsFromSales(rows, produtosById)
-  };
-}
-
-function buildOrdensReport(ordens, search) {
-  const rows = ordens.filter((ordem) => matchesSearch([
-    ordem.idOrdemServico,
-    ordem.cliente?.nome,
-    ordem.cliente?.telefone,
-    equipmentLabel(ordem.equipamento),
-    ordem.problemaRelatado,
-    ordem.status,
-    ordem.diagnostico,
-    ordem.servicoRealizado
-  ], search));
-
-  const abertasRows = rows.filter(isOpenOrder);
-  const prontasRows = rows.filter((ordem) => normalize(ordem.status) === "PRONTO");
-  const entreguesRows = rows.filter((ordem) => normalize(ordem.status) === "ENTREGUE");
-  const staleOrders = abertasRows
-    .filter((ordem) => daysSince(ordem.dataEntrada) >= STALE_ORDER_DAYS)
-    .map((ordem) => ({
-      label: `OS #${formatNumber(ordem.idOrdemServico)}`,
-      value: daysSince(ordem.dataEntrada)
-    }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 8);
-
-  return {
-    rows,
-    abertas: abertasRows.length,
-    prontas: prontasRows.length,
-    entregues: entreguesRows.length,
-    paradas: staleOrders.length,
-    valorAberto: sum(abertasRows, "valorServico"),
-    statusRows: groupCountRows(rows, (ordem) => humanizeStatus(ordem.status)),
-    staleRows: staleOrders
-  };
-}
-
-function buildEstoqueReport(produtos, movimentacoes, search, produtosById) {
-  const rows = produtos.filter((produto) => matchesSearch([
-    produto.nome,
-    produto.categoria,
-    produto.descricao,
-    produto.quantidadeEstoque,
-    produto.ativo ? "ativo" : "inativo",
-    stockStatus(produto)
-  ], search));
-
-  const filteredProductIds = new Set(rows.map((produto) => String(produto.idProduto)));
-  const movements = movimentacoes.filter((movimentacao) => {
-    const idProduto = String(movimentacao.produto?.idProduto || "");
-    const produto = produtosById.get(idProduto);
-
-    return filteredProductIds.has(idProduto) && matchesSearch([
-      productName(idProduto, produtosById),
-      produto?.categoria,
-      movimentacao.tipo,
-      movimentacao.motivo,
-      movimentacao.observacoes
-    ], search);
-  });
-
-  return {
-    rows,
-    ativos: rows.filter((produto) => produto.ativo !== false).length,
-    baixo: rows.filter(isLowStock).length,
-    zerados: rows.filter((produto) => Number(produto.quantidadeEstoque || 0) <= 0).length,
-    valorTotal: rows.reduce((total, produto) => total + productStockValue(produto), 0),
-    movementsByProduct: topStockMovements(movements, produtosById),
-    movementsSummary: groupCountQuantityRows(movements, (movimentacao) => humanizeLabel(movimentacao.tipo))
-  };
-}
-
-function buildClientesReport(clientes, vendas, ordens, search) {
-  const rows = clientes
-    .filter((cliente) => matchesSearch([
-      cliente.nome,
-      cliente.telefone,
-      cliente.cpf,
-      cliente.email,
-      cliente.endereco,
-      cliente.ativo ? "ativo" : "inativo"
-    ], search))
-    .map((cliente) => {
-      const clienteId = String(cliente.idCliente);
-      const clienteVendas = vendas.filter((venda) => String(venda.cliente?.idCliente || "") === clienteId);
-      const clienteOrdens = ordens.filter((ordem) => String(ordem.cliente?.idCliente || "") === clienteId);
-
-      return {
-        ...cliente,
-        totalVendas: clienteVendas.length,
-        totalOrdens: clienteOrdens.length,
-        valorVendas: sum(clienteVendas, "valorTotal"),
-        valorServicos: sum(clienteOrdens, "valorServico")
-      };
-    });
-
-  const clientesComReceita = rows
-    .map((cliente) => ({
-      label: cliente.nome,
-      value: cliente.valorVendas + cliente.valorServicos
-    }))
-    .filter((row) => row.value > 0)
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 8);
-
-  const clientesPorOrdens = rows
-    .map((cliente) => ({
-      label: cliente.nome,
-      value: cliente.totalOrdens
-    }))
-    .filter((row) => row.value > 0)
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 8);
-
-  return {
-    rows,
-    ativos: rows.filter((cliente) => cliente.ativo !== false).length,
-    inativos: rows.filter((cliente) => cliente.ativo === false).length,
-    atendidos: rows.filter((cliente) => cliente.totalVendas > 0 || cliente.totalOrdens > 0).length,
-    receita: rows.reduce((total, cliente) => total + cliente.valorVendas + cliente.valorServicos, 0),
-    topClientes: clientesComReceita,
-    topOrdens: clientesPorOrdens
-  };
-}
-
-function getExportData(activeReport, context) {
-  if (activeReport === "vendas") {
-    return {
-      headers: ["Venda", "Data", "Cliente", "Pagamento", "Itens", "Total"],
-      rows: context.vendas.rows.map((venda) => [
-        formatNumber(venda.idVenda),
-        formatDate(venda.dataVenda),
-        venda.clienteNome || "Venda balcao",
-        humanizePayment(venda.formaPagamento),
-        countVendaItems(venda),
-        currencyFormatter.format(parseMoney(venda.valorTotal))
-      ])
-    };
-  }
-
-  if (activeReport === "ordens") {
-    return {
-      headers: ["OS", "Cliente", "Equipamento", "Status", "Entrada", "Idade", "Valor"],
-      rows: context.ordens.rows.map((ordem) => [
-        formatNumber(ordem.idOrdemServico),
-        ordem.cliente?.nome || "Cliente nao informado",
-        equipmentLabel(ordem.equipamento),
-        humanizeStatus(ordem.status),
-        formatDate(ordem.dataEntrada),
-        orderAgeLabel(ordem),
-        currencyFormatter.format(parseMoney(ordem.valorServico))
-      ])
-    };
-  }
-
-  if (activeReport === "estoque") {
-    return {
-      headers: ["Produto", "Categoria", "Quantidade", "Minimo", "Valor venda", "Valor total", "Status"],
-      rows: context.estoque.rows.map((produto) => [
-        produto.nome,
-        produto.categoria || "Nao informado",
-        produto.quantidadeEstoque || 0,
-        produto.estoqueMinimo || 0,
-        currencyFormatter.format(parseMoney(produto.valorVenda)),
-        currencyFormatter.format(productStockValue(produto)),
-        stockStatus(produto)
-      ])
-    };
-  }
-
-  if (activeReport === "clientes") {
-    return {
-      headers: ["Cliente", "Telefone", "Status", "OS", "Vendas", "Servicos", "Compras"],
-      rows: context.clientes.rows.map((cliente) => [
-        cliente.nome,
-        cliente.telefone || "Nao informado",
-        cliente.ativo ? "Ativo" : "Inativo",
-        cliente.totalOrdens,
-        cliente.totalVendas,
-        currencyFormatter.format(cliente.valorServicos),
-        currencyFormatter.format(cliente.valorVendas)
-      ])
-    };
-  }
-
-  return {
-    headers: ["Data", "Tipo", "Categoria", "Descricao", "Pagamento", "Vinculo", "Valor"],
-    rows: context.caixa.rows.map((movimento) => [
-      formatDateTime(movimento.dataMovimento),
-      humanizeLabel(movimento.tipo),
-      humanizeLabel(movimento.categoria),
-      movimento.descricao || "Nao informado",
-      humanizePayment(movimento.formaPagamento),
-      movementLinkLabel(movimento),
-      `${isEntrada(movimento) ? "+" : "-"}${currencyFormatter.format(parseMoney(movimento.valor))}`
-    ])
-  };
-}
-
-function toCsv(headers, rows) {
-  return [headers, ...rows]
-    .map((row) => row.map(csvCell).join(";"))
-    .join("\n");
-}
-
-function csvCell(value) {
+function escapeCsv(value) {
   const text = String(value ?? "");
-  return `"${text.replace(/"/g, '""')}"`;
+  if (/[;"\n]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
 }
 
-function createIdMap(items, field) {
-  return new Map(items.map((item) => [String(item[field]), item]));
-}
-
-function isInPeriod(value, period) {
-  const dateKey = dateOnly(value);
-  if (!dateKey) {
-    return false;
+function formatCellValue(value, type) {
+  if (value === null || value === undefined || value === "") {
+    return "-";
   }
 
-  if (period.start && dateKey < period.start) {
-    return false;
+  if (type === "money") {
+    return currencyFormatter.format(Number(value) || 0);
   }
 
-  if (period.end && dateKey > period.end) {
-    return false;
+  if (type === "number") {
+    return numberFormatter.format(Number(value) || 0);
   }
 
-  return true;
-}
-
-function dateOnly(value) {
-  if (!value) {
-    return "";
+  if (type === "boolean") {
+    return value ? "Sim" : "Nao";
   }
 
-  return String(value).slice(0, 10);
-}
-
-function matchesSearch(fields, search) {
-  const query = String(search || "").trim().toLowerCase();
-  if (!query) {
-    return true;
+  if (type === "date") {
+    return formatDate(value);
   }
 
-  return fields.some((field) => String(field || "").toLowerCase().includes(query));
-}
-
-function sum(items, field) {
-  return items.reduce((total, item) => total + parseMoney(item[field]), 0);
-}
-
-function groupMoneyRows(items, labelFactory, valueFactory) {
-  const grouped = new Map();
-
-  items.forEach((item) => {
-    const label = labelFactory(item) || "Nao informado";
-    grouped.set(label, (grouped.get(label) || 0) + valueFactory(item));
-  });
-
-  return Array.from(grouped.entries())
-    .map(([label, value]) => ({ label, value }))
-    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
-    .slice(0, 8);
-}
-
-function groupCountRows(items, labelFactory) {
-  const grouped = new Map();
-
-  items.forEach((item) => {
-    const label = labelFactory(item) || "Nao informado";
-    grouped.set(label, (grouped.get(label) || 0) + 1);
-  });
-
-  return Array.from(grouped.entries())
-    .map(([label, value]) => ({ label, value }))
-    .sort((a, b) => b.value - a.value);
-}
-
-function groupCountQuantityRows(items, labelFactory) {
-  const grouped = new Map();
-
-  items.forEach((item) => {
-    const label = labelFactory(item) || "Nao informado";
-    grouped.set(label, (grouped.get(label) || 0) + Number(item.quantidade || 0));
-  });
-
-  return Array.from(grouped.entries())
-    .map(([label, value]) => ({ label, value }))
-    .sort((a, b) => b.value - a.value);
-}
-
-function topProductsFromSales(vendas, produtosById) {
-  const grouped = new Map();
-
-  vendas.forEach((venda) => {
-    (venda.itens || []).forEach((item) => {
-      const idProduto = String(item.produto?.idProduto || "");
-      const label = productName(idProduto, produtosById);
-      grouped.set(label, (grouped.get(label) || 0) + Number(item.quantidade || 0));
-    });
-  });
-
-  return Array.from(grouped.entries())
-    .map(([label, value]) => ({ label, value }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 8);
-}
-
-function topStockMovements(movimentacoes, produtosById) {
-  const grouped = new Map();
-
-  movimentacoes.forEach((movimentacao) => {
-    const idProduto = String(movimentacao.produto?.idProduto || "");
-    const label = productName(idProduto, produtosById);
-    grouped.set(label, (grouped.get(label) || 0) + Number(movimentacao.quantidade || 0));
-  });
-
-  return Array.from(grouped.entries())
-    .map(([label, value]) => ({ label, value }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 8);
-}
-
-function productName(idProduto, produtosById) {
-  const produto = produtosById.get(String(idProduto));
-  return produto?.nome || `Produto #${idProduto || "0"}`;
-}
-
-function productStockValue(produto) {
-  return Number(produto.quantidadeEstoque || 0) * parseMoney(produto.valorVenda);
-}
-
-function stockStatus(produto) {
-  if (produto.ativo === false) {
-    return "Inativo";
+  if (type === "datetime") {
+    return formatDateTime(value);
   }
 
-  if (Number(produto.quantidadeEstoque || 0) <= 0) {
-    return "Zerado";
+  return String(value);
+}
+
+function formatSummaryValue(key, value) {
+  const normalized = String(key).toLowerCase();
+  if (
+    normalized.includes("valor")
+    || normalized.includes("total")
+    || normalized.includes("saldo")
+    || normalized.includes("ticket")
+  ) {
+    return currencyFormatter.format(Number(value) || 0);
   }
 
-  if (isLowStock(produto)) {
-    return "Estoque baixo";
-  }
-
-  return "OK";
+  return numberFormatter.format(Number(value) || 0);
 }
 
-function isLowStock(produto) {
-  return Number(produto.quantidadeEstoque || 0) <= Number(produto.estoqueMinimo || 0);
-}
-
-function isEntrada(movimento) {
-  return String(movimento.tipo || "").toUpperCase() === "ENTRADA";
-}
-
-function signedMovementValue(movimento) {
-  return isEntrada(movimento) ? parseMoney(movimento.valor) : -parseMoney(movimento.valor);
-}
-
-function movementLinkLabel(movimento) {
-  if (movimento.venda?.idVenda) {
-    return `Venda #${formatNumber(movimento.venda.idVenda)}`;
-  }
-
-  if (movimento.ordemServico?.idOrdemServico) {
-    return `OS #${formatNumber(movimento.ordemServico.idOrdemServico)}`;
-  }
-
-  return "Manual";
-}
-
-function countVendaItems(venda) {
-  return (venda.itens || []).reduce((total, item) => total + Number(item.quantidade || 0), 0);
-}
-
-function isOpenOrder(ordem) {
-  return !["ENTREGUE", "CANCELADO"].includes(normalize(ordem.status));
-}
-
-function orderAgeLabel(ordem) {
-  const age = daysSince(ordem.dataEntrada);
-  if (age < 0) {
-    return "Sem data";
-  }
-
-  return `${age} dias`;
-}
-
-function daysSince(value) {
-  const key = dateOnly(value);
-  if (!key) {
-    return -1;
-  }
-
-  const date = new Date(`${key}T00:00:00`);
-  if (Number.isNaN(date.getTime())) {
-    return -1;
-  }
-
-  const today = new Date();
-  const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const diffMs = todayDate.getTime() - date.getTime();
-  return Math.max(0, Math.floor(diffMs / 86400000));
-}
-
-function parseMoney(value) {
-  const normalized = String(value || "0").replace(",", ".");
-  const number = Number(normalized);
-  return Number.isFinite(number) ? number : 0;
-}
-
-function humanizePayment(value) {
-  if (!value) {
-    return "Nao informado";
-  }
-
-  const normalized = normalize(value);
-  const labels = {
-    DINHEIRO: "Dinheiro",
-    PIX: "PIX",
-    CARTAO_DEBITO: "Cartao debito",
-    CARTAO_CREDITO: "Cartao credito"
-  };
-
-  return labels[normalized] || humanizeLabel(value);
-}
-
-function humanizeStatus(status) {
-  if (!status) {
-    return "Sem status";
-  }
-
-  return humanizeLabel(status);
+function currentReportLabel(activeReport) {
+  return reportTabs.find((tab) => tab.id === activeReport)?.label || "Relatorio";
 }
 
 function humanizeLabel(value) {
-  if (!value) {
-    return "Nao informado";
-  }
-
-  return String(value)
+  return String(value || "")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/_/g, " ")
     .toLowerCase()
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
-function normalize(value) {
-  return String(value || "").trim().toUpperCase();
-}
-
-function equipmentLabel(equipamento) {
-  if (!equipamento) {
-    return "Equipamento nao informado";
-  }
-
-  return [equipamento.marca, equipamento.tipoEquipamento, equipamento.modelo]
-    .filter(Boolean)
-    .join(" - ");
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function formatDate(value) {
-  const key = dateOnly(value);
-  if (!key) {
-    return "Sem data";
+  const date = parseDate(value);
+  if (!date) {
+    return "-";
   }
 
-  return new Date(`${key}T00:00:00`).toLocaleDateString("pt-BR");
+  return date.toLocaleDateString("pt-BR");
 }
 
 function formatDateTime(value) {
-  if (!value) {
-    return "Sem data";
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return formatDate(value);
+  const date = parseDate(value);
+  if (!date) {
+    return "-";
   }
 
   return date.toLocaleString("pt-BR", {
@@ -1102,23 +378,23 @@ function formatDateTime(value) {
   });
 }
 
-function formatNumber(value) {
-  return String(value || 0).padStart(6, "0");
+function parseDate(value) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(String(value).includes("T") ? value : `${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 function todayIsoDate() {
-  return toLocalIsoDate(new Date());
+  return new Date().toISOString().slice(0, 10);
 }
 
 function firstDayOfMonthIsoDate() {
   const date = new Date();
-  date.setDate(1);
-  return toLocalIsoDate(date);
-}
-
-function toLocalIsoDate(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
+  const year = firstDay.getFullYear();
+  const month = String(firstDay.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}-01`;
 }

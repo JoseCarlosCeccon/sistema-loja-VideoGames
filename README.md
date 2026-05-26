@@ -1,89 +1,161 @@
-# Ação Games
+# Acao Games
 
-Nova estrutura do projeto separada em backend e frontend web.
+Sistema web para loja de videogames, com backend em Spring Boot e frontend em React/Vite.
 
 ## Estrutura
 
 ```text
-backend/        API em Java + Spring Boot
-frontend/       Aplicação web em React + HTML + CSS
+backend/     API Java + Spring Boot
+frontend/    Aplicacao React + Vite
+scripts/     Atalhos PowerShell para iniciar backend e frontend
 ```
 
-## Status da migração
+## Banco de dados
 
-A estrutura antiga em JavaFX foi removida do repositório.
-O projeto agora segue oficialmente com:
+- Banco esperado: `acaogames`
+- SGBD: PostgreSQL
+- Script oficial: `backend/src/main/resources/schema.sql`
+- O script recria as tabelas com `DROP TABLE` e insere dados iniciais. Execute apenas dentro do banco `acaogames`.
+- A inicializacao automatica do Spring esta desativada em `application.yml` com `spring.sql.init.mode: never`.
 
-- backend web em Spring Boot
-- frontend web em React
+O schema inclui:
+
+- clientes
+- usuarios do sistema
+- equipamentos
+- produtos, incluindo foto do produto
+- ordens de servico
+- vendas e itens de venda
+- caixa
+- movimentacoes de estoque
+- tabelas historicas de orcamento, garantia e itens de servico
 
 ## Backend
 
 - Stack: Java 8 + Spring Boot 2.7 + PostgreSQL
-- Porta padrão: `8080`
-- Banco padrão: `jdbc:postgresql://localhost:5432/acaogames`
-- Credenciais padrão:
-  - usuário: `postgres`
-  - senha: `1234`
+- Porta padrao: `8080`
+- Maven Wrapper incluido: use `backend/mvnw.cmd` no Windows ou `backend/mvnw` em Unix/macOS.
 
-### Endpoints principais
+### Requisitos
 
-- `GET /api/dashboard`
-- `GET|POST|PUT|DELETE /api/clientes`
-- `GET|POST|PUT|DELETE /api/produtos`
-- `GET|POST|PUT|DELETE /api/equipamentos`
-- `GET|POST|PUT|DELETE /api/ordens-servico`
-- `GET /api/ordens-servico/status`
+Use um JDK, nao apenas JRE. No Windows, o wrapper tenta usar `C:\Program Files\Java\jdk1.8.0_111` quando existir. Em outros ambientes, configure `JAVA_HOME` para um JDK compativel.
 
-### Observação sobre a versão
+### Variaveis
 
-Esta base foi montada com `Spring Boot 2.7.x` porque o ambiente atual está em `Java 8`.
-Se vocês quiserem migrar para `Spring Boot 3`, o próximo passo é atualizar o JDK para `17+`.
-
-### Como subir
-
-```bash
-cd backend
-mvn spring-boot:run
+```text
+SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/acaogames
+SPRING_DATASOURCE_USERNAME=postgres
+SPRING_DATASOURCE_PASSWORD=1234
+APP_CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+APP_DEFAULT_USER_ID=1
 ```
 
-O arquivo [application.yml](backend/src/main/resources/application.yml) aceita sobrescrita por variáveis de ambiente:
+### Como rodar
 
-- `SPRING_DATASOURCE_URL`
-- `SPRING_DATASOURCE_USERNAME`
-- `SPRING_DATASOURCE_PASSWORD`
-- `APP_CORS_ALLOWED_ORIGINS`
-- `APP_DEFAULT_USER_ID`
+```powershell
+cd backend
+.\mvnw.cmd spring-boot:run
+```
 
-O script [schema.sql](backend/src/main/resources/schema.sql) cria a base mínima necessária se as tabelas ainda não existirem.
+Ou use:
+
+```powershell
+.\scripts\start-backend.ps1
+```
+
+### Autenticacao
+
+O endpoint publico de login e:
+
+```text
+POST /api/usuarios/login
+```
+
+As demais rotas `/api/**` exigem token Bearer:
+
+```text
+Authorization: Bearer <token>
+```
+
+O frontend salva o token da sessao e envia automaticamente nas chamadas HTTP. URLs de PDF e imagem tambem recebem o token via query string gerada pelo helper da API.
+
+### Endpoints ativos principais
+
+```text
+GET /api/dashboard
+GET|POST|PUT|DELETE /api/clientes
+GET|POST|PUT|DELETE /api/produtos
+GET|POST|PUT|DELETE /api/equipamentos
+GET|POST|PUT|DELETE /api/ordens-servico
+POST /api/ordens-servico/{id}/saida
+GET /api/ordens-servico/{id}/pdf
+GET|POST|PUT|DELETE /api/vendas
+GET /api/vendas/{id}/pdf
+GET|POST|PUT|DELETE /api/movimentos-caixa
+GET /api/movimentos-caixa/saldo
+GET /api/movimentos-caixa/saldo-hoje
+GET /api/relatorios/caixa
+GET /api/relatorios/vendas
+GET /api/relatorios/ordens
+GET /api/relatorios/estoque
+GET /api/relatorios/clientes
+```
+
+Os relatorios aceitam:
+
+```text
+inicio=YYYY-MM-DD
+fim=YYYY-MM-DD
+busca=texto
+page=0
+size=20
+```
 
 ## Frontend
 
-- Stack: React + Vite + CSS
-- Porta padrão: `5173`
-- URL padrão da API: `http://localhost:8080/api`
-- Templates visuais disponíveis:
-  - `Balcao Pro`: claro, compacto e focado em atendimento
-  - `Bancada Tecnica`: escuro, técnico e orientado a ordens de serviço
-  - `Arcade Neon`: mais expressivo para identidade gamer
+- Stack: React 18 + Vite
+- Porta padrao: `5173`
+- Proxy de desenvolvimento: `/api` para `http://localhost:8080`
 
-### Como subir
+### Como rodar
 
-```bash
+```powershell
 cd frontend
 npm install
 npm run dev
 ```
 
-Se quiser apontar para outra API, copie `frontend/.env.example` para `.env` e ajuste:
+Ou use:
 
-```bash
-VITE_API_URL=http://localhost:8080/api
+```powershell
+.\scripts\start-frontend.ps1
 ```
 
-## Próximos passos naturais
+## Validacao
 
-- adicionar autenticação e perfis de usuário
-- criar módulos de vendas, caixa e orçamento
-- separar DTOs de resposta para deixar a API mais estável
-- adicionar testes automatizados no backend e no frontend
+Backend:
+
+```powershell
+cd backend
+.\mvnw.cmd test
+```
+
+Frontend:
+
+```powershell
+cd frontend
+npm run build
+```
+
+## Modulos removidos da API publica
+
+Foram removidos endpoints sem tela/consumo atual:
+
+- garantias
+- orcamentos
+- itens de servico
+- itens de venda direto
+- movimentacoes de estoque direto
+- CRUD publico de usuarios
+
+As tabelas historicas continuam no schema para preservar compatibilidade com o banco informado.

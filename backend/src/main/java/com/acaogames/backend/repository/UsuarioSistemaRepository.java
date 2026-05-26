@@ -10,8 +10,6 @@ import java.util.Optional;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.jdbc.support.GeneratedKeyHolder;
-import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -32,10 +30,6 @@ public class UsuarioSistemaRepository {
         return usuarios.stream().findFirst();
     }
 
-    public List<UsuarioSistema> findAll() {
-        return jdbcTemplate.query("SELECT * FROM usuario_sistema ORDER BY nome", rowMapper());
-    }
-
     public Optional<UsuarioSistema> findByLogin(String login) {
         List<UsuarioSistema> usuarios = jdbcTemplate.query(
                 "SELECT * FROM usuario_sistema WHERE login = :login",
@@ -43,43 +37,6 @@ public class UsuarioSistemaRepository {
                 rowMapper()
         );
         return usuarios.stream().findFirst();
-    }
-
-    public UsuarioSistema create(UsuarioSistema usuario) {
-        String sql = "INSERT INTO usuario_sistema(nome, login, senha, perfil, ativo) "
-                + "VALUES(:nome, :login, :senha, :perfil, :ativo)";
-        KeyHolder keyHolder = new GeneratedKeyHolder();
-        jdbcTemplate.update(sql, toParams(usuario), keyHolder, new String[]{"id_usuario"});
-        Number key = keyHolder.getKey();
-        if (key != null) {
-            usuario.setIdUsuario(key.longValue());
-        }
-        return findById(usuario.getIdUsuario()).orElse(usuario);
-    }
-
-    public UsuarioSistema update(UsuarioSistema usuario) {
-        String sql = "UPDATE usuario_sistema SET nome = :nome, login = :login, senha = :senha, "
-                + "perfil = :perfil, ativo = :ativo WHERE id_usuario = :idUsuario";
-        MapSqlParameterSource params = toParams(usuario);
-        params.addValue("idUsuario", usuario.getIdUsuario());
-        jdbcTemplate.update(sql, params);
-        return findById(usuario.getIdUsuario()).orElse(usuario);
-    }
-
-    public void delete(Long idUsuario) {
-        jdbcTemplate.update(
-                "DELETE FROM usuario_sistema WHERE id_usuario = :idUsuario",
-                new MapSqlParameterSource("idUsuario", idUsuario)
-        );
-    }
-
-    private MapSqlParameterSource toParams(UsuarioSistema usuario) {
-        return new MapSqlParameterSource()
-                .addValue("nome", usuario.getNome())
-                .addValue("login", usuario.getLogin())
-                .addValue("senha", usuario.getSenha())
-                .addValue("perfil", usuario.getPerfil())
-                .addValue("ativo", usuario.isAtivo());
     }
 
     private RowMapper<UsuarioSistema> rowMapper() {

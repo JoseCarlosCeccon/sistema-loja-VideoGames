@@ -9,14 +9,16 @@ public class LoginResponse {
     private String login;
     private String perfil;
     private boolean ativo;
+    private String token;
 
-    public static LoginResponse from(UsuarioSistema usuario) {
+    public static LoginResponse from(UsuarioSistema usuario, String token) {
         LoginResponse response = new LoginResponse();
         response.setIdUsuario(usuario.getIdUsuario());
         response.setNome(usuario.getNome());
         response.setLogin(usuario.getLogin());
         response.setPerfil(usuario.getPerfil());
         response.setAtivo(usuario.isAtivo());
+        response.setToken(token);
         return response;
     }
 
@@ -58,5 +60,13 @@ public class LoginResponse {
 
     public void setAtivo(boolean ativo) {
         this.ativo = ativo;
+    }
+
+    public String getToken() {
+        return token;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
     }
 }

@@ -1,11 +1,27 @@
 const API_URL = import.meta.env.VITE_API_URL || "/api";
 const DEFAULT_TIMEOUT_MS = 15000;
+const AUTH_STORAGE_KEY = "acao-games-auth-user";
+
+function readAuthToken() {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  try {
+    const stored = window.localStorage.getItem(AUTH_STORAGE_KEY);
+    const usuario = stored ? JSON.parse(stored) : null;
+    return usuario?.token || "";
+  } catch {
+    return "";
+  }
+}
 
 async function request(path, options = {}) {
   const { timeoutMs = DEFAULT_TIMEOUT_MS, ...fetchOptions } = options;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   const isFormData = fetchOptions.body instanceof FormData;
+  const token = readAuthToken();
 
   try {
     const response = await fetch(`${API_URL}${path}`, {
@@ -13,6 +29,7 @@ async function request(path, options = {}) {
       signal: controller.signal,
       headers: {
         ...(isFormData ? {} : { "Content-Type": "application/json" }),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(fetchOptions.headers || {})
       }
     });
@@ -51,7 +68,9 @@ async function request(path, options = {}) {
 
 export const api = {
   fileUrl(path) {
-    return `${API_URL}${path}`;
+    const token = readAuthToken();
+    const separator = path.includes("?") ? "&" : "?";
+    return token ? `${API_URL}${path}${separator}access_token=${encodeURIComponent(token)}` : `${API_URL}${path}`;
   },
   get(path) {
     return request(path);

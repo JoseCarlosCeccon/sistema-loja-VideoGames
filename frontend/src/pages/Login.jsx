@@ -36,7 +36,7 @@ export default function LoginPage({ onAuthenticated }) {
 
   return (
     <main className="login-shell">
-      <section className="login-card" aria-labelledby="login-title">
+      <section className="login-card" aria-label="Acesso ao sistema">
         <div className="login-brand">
           <img src={loginLogo} alt="Logo A-O Games" className="login-logo" />
           <div>

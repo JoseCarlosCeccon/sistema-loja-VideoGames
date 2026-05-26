@@ -163,11 +163,9 @@ button:disabled {
 
 .top-nav__item,
 .header-link,
-.icon-button,
 .mode-button,
 .hero-cta,
-.filter-button,
-.link-button {
+.filter-button {
   border: 1px solid transparent;
   color: var(--text);
   transition:
@@ -199,8 +197,7 @@ button:disabled {
   gap: 8px;
 }
 
-.header-link,
-.icon-button {
+.header-link {
   min-height: 36px;
   border-radius: 999px;
   background: transparent;
@@ -212,16 +209,7 @@ button:disabled {
   font-weight: 700;
 }
 
-.icon-button {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 36px;
-  color: var(--muted-strong);
-}
-
-.header-link:hover,
-.icon-button:hover {
+.header-link:hover {
   background: rgba(255, 255, 255, 0.08);
 }
 
@@ -495,8 +483,7 @@ button:disabled {
 
 .mode-button:hover,
 .hero-cta:hover,
-.filter-button:hover,
-.link-button:hover {
+.filter-button:hover {
   transform: translateY(-2px);
 }
 
@@ -860,14 +847,6 @@ td span {
 .panel h2 {
   margin: 0;
   font-size: 1.16rem;
-}
-
-.link-button {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--cyan-soft);
-  font-weight: 800;
 }
 
 .table-action {
@@ -1996,6 +1975,49 @@ td:first-child {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
+}
+
+.report-summary-card {
+  min-height: 92px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  box-shadow: var(--box-shadow);
+}
+
+.report-summary-card span,
+.report-count {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.report-summary-card strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--text);
+  font-size: 1.35rem;
+  font-weight: 950;
+}
+
+.reports-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.reports-pagination > span {
+  color: var(--muted-strong);
+  font-size: 0.85rem;
+  font-weight: 900;
+}
+
+.reports-page-size {
+  width: 112px;
 }
 
 .report-main-grid {

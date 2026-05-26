@@ -1,94 +1,46 @@
 package com.acaogames.backend.service;
 
 import com.acaogames.backend.dto.LoginRequest;
-import com.acaogames.backend.dto.UsuarioSistemaRequest;
-import com.acaogames.backend.exception.BadRequestException;
-import com.acaogames.backend.exception.ResourceNotFoundException;
 import com.acaogames.backend.exception.UnauthorizedException;
 import com.acaogames.backend.model.UsuarioSistema;
 import com.acaogames.backend.repository.UsuarioSistemaRepository;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
 public class UsuarioSistemaService {
 
-    private static final Set<String> PERFIS = new HashSet<String>(Arrays.asList(
-            "ADMINISTRADOR",
-            "ATENDENTE",
-            "TECNICO",
-            "FINANCEIRO"
-    ));
-
     private final UsuarioSistemaRepository usuarioSistemaRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public UsuarioSistemaService(UsuarioSistemaRepository usuarioSistemaRepository) {
+    public UsuarioSistemaService(UsuarioSistemaRepository usuarioSistemaRepository, PasswordEncoder passwordEncoder) {
         this.usuarioSistemaRepository = usuarioSistemaRepository;
-    }
-
-    public List<UsuarioSistema> listar() {
-        return usuarioSistemaRepository.findAll();
-    }
-
-    public UsuarioSistema buscar(Long idUsuario) {
-        return usuarioSistemaRepository.findById(idUsuario)
-                .orElseThrow(notFound("Usuario nao encontrado."));
-    }
-
-    public UsuarioSistema criar(UsuarioSistemaRequest request) {
-        UsuarioSistema usuario = new UsuarioSistema();
-        preencherUsuario(usuario, request);
-        return usuarioSistemaRepository.create(usuario);
-    }
-
-    public UsuarioSistema atualizar(Long idUsuario, UsuarioSistemaRequest request) {
-        UsuarioSistema usuario = buscar(idUsuario);
-        preencherUsuario(usuario, request);
-        return usuarioSistemaRepository.update(usuario);
-    }
-
-    public void remover(Long idUsuario) {
-        buscar(idUsuario);
-        usuarioSistemaRepository.delete(idUsuario);
+        this.passwordEncoder = passwordEncoder;
     }
 
     public UsuarioSistema login(LoginRequest request) {
         UsuarioSistema usuario = usuarioSistemaRepository.findByLogin(request.getLogin())
                 .orElseThrow(unauthorized("Usuario ou senha invalidos."));
 
-        if (!usuario.isAtivo() || !usuario.getSenha().equals(request.getSenha())) {
+        if (!usuario.isAtivo() || !senhaConfere(request.getSenha(), usuario.getSenha())) {
             throw new UnauthorizedException("Usuario ou senha invalidos.");
         }
 
         return usuario;
     }
 
-    private void preencherUsuario(UsuarioSistema usuario, UsuarioSistemaRequest request) {
-        usuario.setNome(request.getNome());
-        usuario.setLogin(request.getLogin());
-        usuario.setSenha(request.getSenha());
-        usuario.setPerfil(normalizarPerfil(request.getPerfil()));
-        usuario.setAtivo(request.getAtivo() == null ? true : request.getAtivo().booleanValue());
-    }
-
-    private String normalizarPerfil(String perfil) {
-        String valor = perfil == null ? "" : perfil.trim().toUpperCase();
-        if (!PERFIS.contains(valor)) {
-            throw new BadRequestException("Perfil de usuario invalido.");
+    private boolean senhaConfere(String senhaInformada, String senhaArmazenada) {
+        if (senhaArmazenada == null) {
+            return false;
         }
-        return valor;
-    }
 
-    private java.util.function.Supplier<ResourceNotFoundException> notFound(final String message) {
-        return new java.util.function.Supplier<ResourceNotFoundException>() {
-            @Override
-            public ResourceNotFoundException get() {
-                return new ResourceNotFoundException(message);
-            }
-        };
+        if (senhaArmazenada.startsWith("$2a$")
+                || senhaArmazenada.startsWith("$2b$")
+                || senhaArmazenada.startsWith("$2y$")) {
+            return passwordEncoder.matches(senhaInformada, senhaArmazenada);
+        }
+
+        return senhaArmazenada.equals(senhaInformada);
     }
 
     private java.util.function.Supplier<UnauthorizedException> unauthorized(final String message) {

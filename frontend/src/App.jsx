@@ -11,21 +11,13 @@ import fundoPersonagensUrl from "./assets/images/FUNDO DE PERSONAGENS.jpg";
 import logoAcaoGames from "./assets/images/logo acao games.jpg";
 import arrowDownIcon from "./assets/icons/arrow-down-to-line.svg";
 import arrowUpIcon from "./assets/icons/arrow-up-from-line.svg";
-import banknoteIcon from "./assets/icons/banknote.svg";
 import cartIcon from "./assets/icons/bootstrap_cart_plus.svg";
-import checkCircleIcon from "./assets/icons/check-circle.svg";
 import chevronRightIcon from "./assets/icons/chevron-right.svg";
-import fileTextIcon from "./assets/icons/file-text.svg";
 import gameIcon from "./assets/icons/gamepad.svg";
 import graphIcon from "./assets/icons/graph-icon.svg";
-import helpCircleIcon from "./assets/icons/help-circle.svg";
 import homeIcon from "./assets/icons/home.svg";
 import packageIcon from "./assets/icons/package.svg";
-import packageSearchIcon from "./assets/icons/package-search.svg";
 import cashRegisterIcon from "./assets/icons/phosphor_cash_register.svg";
-import searchIcon from "./assets/icons/search.svg";
-import settingsIcon from "./assets/icons/settings.svg";
-import userCheckIcon from "./assets/icons/user-check.svg";
 import userIcon from "./assets/icons/user.svg";
 
 const navItems = [
@@ -34,9 +26,7 @@ const navItems = [
   { id: "equipamentos", label: "Equipamentos", icon: <SvgIcon src={gameIcon} size={14} /> },
   { id: "produtos", label: "Estoque", icon: <SvgIcon src={packageIcon} size={14} /> },
   { id: "caixa", label: "Caixa", icon: <SvgIcon src={cashRegisterIcon} size={14} /> },
-  { id: "relatorios", label: "Relatorios", icon: <SvgIcon src={graphIcon} size={14} /> },
-  { id: "usuarios", label: "Usuarios", icon: <SvgIcon src={userIcon} size={14} /> },
-  { id: "configuracoes", label: "Configuracoes", icon: <SvgIcon src={settingsIcon} size={14} /> }
+  { id: "relatorios", label: "Relatorios", icon: <SvgIcon src={graphIcon} size={14} /> }
 ];
 
 const actionItems = [
@@ -62,69 +52,6 @@ const actionItems = [
     tone: "gold"
   }
 ];
-
-const fallbackClientes = [
-  { idCliente: 1, nome: "Joao Silva", telefone: "(28) 99999-1111" },
-  { idCliente: 2, nome: "Maria Oliveira", telefone: "(28) 99999-2222" },
-  { idCliente: 3, nome: "Pedro Santos", telefone: "(28) 99999-3333" },
-  { idCliente: 4, nome: "Lucas Almeida", telefone: "(28) 99999-4444" },
-  { idCliente: 5, nome: "Fernanda Lima", telefone: "(28) 99999-5555" }
-];
-
-const fallbackEquipamentos = [
-  { idEquipamento: 1, marca: "Sony", tipoEquipamento: "Console", modelo: "PlayStation 3 Super Slim" },
-  { idEquipamento: 2, marca: "Sony", tipoEquipamento: "Console", modelo: "PlayStation 4 Fat" },
-  { idEquipamento: 3, marca: "Sony", tipoEquipamento: "Console", modelo: "PlayStation 4 Slim" },
-  { idEquipamento: 4, marca: "Sony", tipoEquipamento: "Console", modelo: "PlayStation 4 Pro" },
-  { idEquipamento: 5, marca: "Sony", tipoEquipamento: "Console", modelo: "PlayStation 5" }
-];
-
-const fallbackOrdensServico = [
-  {
-    idOrdemServico: 123,
-    cliente: fallbackClientes[0],
-    equipamento: fallbackEquipamentos[4],
-    problemaRelatado: "Nao liga",
-    status: "RECEBIDO",
-    dataEntrada: "2026-05-20"
-  },
-  {
-    idOrdemServico: 122,
-    cliente: fallbackClientes[1],
-    equipamento: { idEquipamento: 11, marca: "Microsoft", tipoEquipamento: "Console", modelo: "Xbox One S" },
-    problemaRelatado: "Superaquecendo",
-    status: "EM_ANALISE",
-    dataEntrada: "2026-05-19"
-  },
-  {
-    idOrdemServico: 121,
-    cliente: fallbackClientes[2],
-    equipamento: { idEquipamento: 20, marca: "Nintendo", tipoEquipamento: "Console", modelo: "Nintendo Switch" },
-    problemaRelatado: "Tela nao exibe",
-    status: "AGUARDANDO_APROVACAO",
-    dataEntrada: "2026-05-18"
-  }
-];
-
-const fallbackProdutos = [
-  { idProduto: 1, nome: "Cabo HDMI 2.0", categoria: "Acessorio", valorVenda: 35 },
-  { idProduto: 2, nome: "Controle PS4 Usado", categoria: "Produto", valorVenda: 180 },
-  { idProduto: 3, nome: "Cabo USB-C", categoria: "Acessorio", valorVenda: 30 },
-  { idProduto: 4, nome: "Fonte PS4 Slim", categoria: "Peca", valorVenda: 220 },
-  { idProduto: 5, nome: "Pasta termica", categoria: "Insumo", valorVenda: 45 }
-];
-
-const fallbackDashboard = {
-  ordensAbertas: 12,
-  ordensProntas: 7,
-  produtosEstoqueBaixo: 8,
-  valorServicoEmAberto: 1845.9,
-  vendasDoDia: 275,
-  caixaDoDia: 365,
-  saldoCaixa: 485,
-  ordensRecentes: fallbackOrdensServico,
-  vendasRecentes: []
-};
 
 const emptyDashboard = {
   ordensAbertas: 0,
@@ -246,12 +173,16 @@ function App() {
       setClientes(Array.isArray(clientesData) ? clientesData : []);
       setEquipamentos(Array.isArray(equipamentosData) ? equipamentosData : []);
       setOrdens(Array.isArray(ordensData) ? ordensData : []);
-    } catch {
-      setDashboard(fallbackDashboard);
-      setProdutos(fallbackProdutos);
-      setClientes(fallbackClientes);
-      setEquipamentos(fallbackEquipamentos);
-      setOrdens(fallbackOrdensServico);
+    } catch (error) {
+      setDashboard(emptyDashboard);
+      setProdutos([]);
+      setClientes([]);
+      setEquipamentos([]);
+      setOrdens([]);
+      setFeedback({
+        type: "error",
+        message: error.message || "Nao foi possivel carregar os dados do painel."
+      });
     } finally {
       setLoading(false);
     }
@@ -287,13 +218,6 @@ function App() {
       behavior: "smooth",
       block: "start"
     });
-  }
-
-  function showFutureScreen(sectionId, label) {
-    startTransition(() => {
-      setActiveSection(sectionId);
-    });
-    setFeedback({ type: "success", message: `Tela de ${label} sera criada futuramente.` });
   }
 
   function openClientesPage() {
@@ -362,7 +286,6 @@ function App() {
       return;
     }
 
-    showFutureScreen(item.id, item.label);
   }
 
   function handleAction(action) {
@@ -381,7 +304,6 @@ function App() {
       return;
     }
 
-    showFutureScreen(action.id, action.label);
   }
 
   function openEntradaModal() {
@@ -684,9 +606,7 @@ function App() {
   }
 
   const recentOrders = (dashboard.ordensRecentes || []).slice(0, 5);
-  const recentSales = dashboard.vendasRecentes?.length
-    ? dashboard.vendasRecentes.slice(0, 5)
-    : produtos.slice(0, 5);
+  const recentSales = (dashboard.vendasRecentes || []).slice(0, 5);
   const isStandalonePage = activeSection === "clientes"
     || activeSection === "equipamentos"
     || activeSection === "produtos"
@@ -705,7 +625,7 @@ function App() {
         </button>
 
         <nav className="top-nav" aria-label="Navegacao principal">
-          {navItems.slice(0, 6).map((item) => (
+          {navItems.map((item) => (
             <button
               key={item.id}
               type="button"
@@ -728,19 +648,12 @@ function App() {
             <span className={`theme-toggle-icon theme-toggle-icon--${themeMode === "light" ? "dark" : "light"}`} aria-hidden="true" />
             {themeMode === "light" ? "Tema escuro" : "Tema claro"}
           </button>
-          <button type="button" className="header-link" onClick={() => showFutureScreen("configuracoes", "Configuracoes")}>
-            <SvgIcon src={settingsIcon} size={15} />
-            Configuracoes
-          </button>
           <div className="header-user-chip">
             <span>{authUser.nome || authUser.login}</span>
             <small>{humanizeStatus(authUser.perfil)}</small>
           </div>
           <button type="button" className="header-link" onClick={handleLogout}>
             Sair
-          </button>
-          <button type="button" className="icon-button" aria-label="Ajuda">
-            <SvgIcon src={helpCircleIcon} size={15} />
           </button>
         </div>
       </header>
@@ -819,23 +732,16 @@ function App() {
           </div>
         </section>
 
-        <section className="filters-bar" aria-label="Filtros rapidos">
-          <label className="search-room">
-            <SvgIcon src={searchIcon} size={15} />
-            <input type="search" placeholder="Buscar OS, cliente ou produto..." />
-          </label>
-        </section>
-
         <section className="metric-grid" aria-label="Resumo">
-          <MetricCard label="OS em aberto" value={dashboard.ordensAbertas} trend="+9%" accent="cyan" />
-          <MetricCard label="Prontos para entrega" value={dashboard.ordensProntas} trend="+16%" accent="green" />
-          <MetricCard label="Vendas do dia" value={currencyFormatter.format(dashboard.vendasDoDia || 0)} trend="+22%" accent="blue" />
-          <MetricCard label="Caixa do dia" value={currencyFormatter.format(dashboard.caixaDoDia || 0)} trend="+22%" accent="gold" />
-          <MetricCard label="Estoque baixo" value={dashboard.produtosEstoqueBaixo} trend="-11%" accent="red" />
+          <MetricCard label="OS em aberto" value={dashboard.ordensAbertas} accent="cyan" />
+          <MetricCard label="Prontos para entrega" value={dashboard.ordensProntas} accent="green" />
+          <MetricCard label="Vendas do dia" value={currencyFormatter.format(dashboard.vendasDoDia || 0)} accent="blue" />
+          <MetricCard label="Caixa do dia" value={currencyFormatter.format(dashboard.caixaDoDia || 0)} accent="gold" />
+          <MetricCard label="Estoque baixo" value={dashboard.produtosEstoqueBaixo} accent="red" />
         </section>
 
         <section className="dashboard-main-grid">
-          <Panel title="Ordens de Servico Recentes" action="Ver todas">
+          <Panel title="Ordens de Servico Recentes">
             <div className="table-wrap">
               <table className="compact-table">
                 <thead>
@@ -874,7 +780,7 @@ function App() {
             </div>
           </Panel>
 
-          <Panel title="Vendas Recentes" action="Ver todas">
+          <Panel title="Vendas Recentes">
             <div className="sales-list">
               {recentSales.length ? recentSales.map((item) => (
                 <article key={item.idVenda || item.idProduto || item.nome} className="sale-row">
@@ -891,16 +797,6 @@ function App() {
             </div>
           </Panel>
         </section>
-
-        <Panel title="Atividades Recentes">
-          <div className="activity-strip">
-            <ActivityItem icon={<SvgIcon src={fileTextIcon} size={15} />} title="Nova OS criada" time="Ha 10 min" />
-            <ActivityItem icon={<SvgIcon src={checkCircleIcon} size={15} />} title="Servico concluido" time="Ha 1 h" />
-            <ActivityItem icon={<SvgIcon src={packageSearchIcon} size={15} />} title="Estoque atualizado" time="Ha 2 h" />
-            <ActivityItem icon={<SvgIcon src={banknoteIcon} size={15} />} title="Venda realizada" time="Ha 3 h" />
-            <ActivityItem icon={<SvgIcon src={userCheckIcon} size={15} />} title="Usuario conectado" time="Ha 4 h" />
-          </div>
-        </Panel>
 
         {loading ? <div className="loading-overlay">Carregando dados...</div> : null}
         </div>
@@ -1467,34 +1363,22 @@ function SvgIcon({ src, size = 18 }) {
   );
 }
 
-function MetricCard({ label, value, trend, accent }) {
+function MetricCard({ label, value, accent }) {
   return (
     <article className={`metric-card metric-card--${accent}`}>
       <span>{label}</span>
       <strong>{value}</strong>
-      <small>{trend} em relacao a ontem</small>
     </article>
   );
 }
 
-function Panel({ title, action, children }) {
+function Panel({ title, children }) {
   return (
     <article className="panel">
       <div className="panel-head">
         <h2>{title}</h2>
-        {action ? <button type="button" className="link-button">{action}</button> : null}
       </div>
       {children}
-    </article>
-  );
-}
-
-function ActivityItem({ icon, title, time }) {
-  return (
-    <article>
-      <span>{icon}</span>
-      <strong>{title}</strong>
-      <small>{time}</small>
     </article>
   );
 }
@@ -1675,7 +1559,11 @@ function readStoredUser() {
 
   try {
     const stored = window.localStorage.getItem(authStorageKey);
-    return stored ? sanitizeSessionUser(JSON.parse(stored)) : null;
+    const sessionUser = stored ? sanitizeSessionUser(JSON.parse(stored)) : null;
+    if (stored && !sessionUser) {
+      window.localStorage.removeItem(authStorageKey);
+    }
+    return sessionUser;
   } catch {
     window.localStorage.removeItem(authStorageKey);
     return null;
@@ -1683,7 +1571,7 @@ function readStoredUser() {
 }
 
 function sanitizeSessionUser(usuario) {
-  if (!usuario) {
+  if (!usuario || !usuario.token) {
     return null;
   }
 
@@ -1692,7 +1580,8 @@ function sanitizeSessionUser(usuario) {
     nome: usuario.nome || "",
     login: usuario.login || "",
     perfil: usuario.perfil || "",
-    ativo: usuario.ativo !== false
+    ativo: usuario.ativo !== false,
+    token: usuario.token || ""
   };
 }
 
