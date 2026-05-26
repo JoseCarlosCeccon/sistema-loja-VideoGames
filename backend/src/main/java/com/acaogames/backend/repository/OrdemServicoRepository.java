@@ -116,6 +116,15 @@ public class OrdemServicoRepository {
         return total == null ? BigDecimal.ZERO : total;
     }
 
+    public BigDecimal sumValorServicoByDataSaida(LocalDate dataSaida) {
+        BigDecimal total = jdbcTemplate.queryForObject(
+                "SELECT COALESCE(SUM(valor_servico), 0) FROM ordem_servico WHERE data_saida = :dataSaida",
+                new MapSqlParameterSource("dataSaida", toDate(dataSaida)),
+                BigDecimal.class
+        );
+        return total == null ? BigDecimal.ZERO : total;
+    }
+
     public List<OrdemServico> findRecent(int limit) {
         String sql = BASE_SELECT + "ORDER BY os.data_criacao DESC, os.id_ordem_servico DESC LIMIT :limit";
         return jdbcTemplate.query(

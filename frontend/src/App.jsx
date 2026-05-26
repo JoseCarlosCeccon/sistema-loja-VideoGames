@@ -1154,7 +1154,7 @@ function SaidaModal({ ordens, form, saving, onClose, onSubmit, onChange }) {
               <div className="total-card">
                 <span>Total do servico</span>
                 <strong>{currencyFormatter.format(valorServico)}</strong>
-                <small>Esse valor entra no caixa e soma em vendas do dia.</small>
+                <small>Esse valor entra no caixa do dia ao registrar a saida.</small>
               </div>
             </fieldset>
 

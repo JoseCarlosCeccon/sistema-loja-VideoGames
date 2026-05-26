@@ -117,18 +117,6 @@ public class MovimentoCaixaRepository {
         return total == null ? BigDecimal.ZERO : total;
     }
 
-    public BigDecimal sumEntradasByDateAndCategories(LocalDate data, List<String> categorias) {
-        BigDecimal total = jdbcTemplate.queryForObject(
-                "SELECT COALESCE(SUM(valor), 0) FROM movimento_caixa "
-                        + "WHERE tipo = 'ENTRADA' AND DATE(data_movimento) = :data AND categoria IN (:categorias)",
-                new MapSqlParameterSource()
-                        .addValue("data", java.sql.Date.valueOf(data))
-                        .addValue("categorias", categorias),
-                BigDecimal.class
-        );
-        return total == null ? BigDecimal.ZERO : total;
-    }
-
     private MapSqlParameterSource toParams(MovimentoCaixa movimento) {
         Long idVenda = movimento.getVenda() == null ? null : movimento.getVenda().getIdVenda();
         Long idOrdemServico = movimento.getOrdemServico() == null ? null : movimento.getOrdemServico().getIdOrdemServico();
