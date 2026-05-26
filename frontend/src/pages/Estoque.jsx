@@ -673,7 +673,7 @@ function ProductDetailsModal({ produto, onClose, onEdit }) {
 function ProductThumb({ produto }) {
   if (produto.possuiFoto) {
     return (
-      <span className={`product-thumb ${isLowStock(produto) ? "stock-avatar--low" : ""}`}>
+      <span className={`client-avatar product-thumb ${isLowStock(produto) ? "stock-avatar--low" : ""}`}>
         <img src={productPhotoUrl(produto)} alt={`Foto de ${produto.nome}`} loading="lazy" />
       </span>
     );
