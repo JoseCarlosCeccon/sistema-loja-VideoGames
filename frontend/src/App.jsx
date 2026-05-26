@@ -1,6 +1,10 @@
-import { startTransition, useEffect, useState } from "react";
+import { startTransition, useEffect, useLayoutEffect, useState } from "react";
 import { api } from "./services/api";
 import ClientesPage from "./pages/Clientes";
+import EquipamentosPage from "./pages/Equipamentos";
+import EstoquePage from "./pages/Estoque";
+import currentDesignCss from "./current-design.css?raw";
+import fundoPersonagensUrl from "./assets/images/FUNDO DE PERSONAGENS.jpg";
 import logoAcaoGames from "./assets/images/logo acao games.jpg";
 import arrowDownIcon from "./assets/icons/arrow-down-to-line.svg";
 import arrowUpIcon from "./assets/icons/arrow-up-from-line.svg";
@@ -146,8 +150,26 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   currency: "BRL"
 });
 
+const currentDesignStyleId = "acao-games-current-design";
+const currentDesignStyleContent = currentDesignCss.replace(
+  'url("./assets/images/FUNDO DE PERSONAGENS.jpg")',
+  `url("${fundoPersonagensUrl}")`
+);
+
 function App() {
   const [activeSection, setActiveSection] = useState("dashboard");
+  const [themeMode, setThemeMode] = useState(() => {
+    if (typeof window === "undefined") {
+      return "light";
+    }
+
+    const savedTheme = window.localStorage.getItem("acao-games-theme-mode");
+    if (savedTheme === "dark" || savedTheme === "light") {
+      return savedTheme;
+    }
+
+    return window.localStorage.getItem("acao-games-design-mode") === "legacy" ? "dark" : "light";
+  });
   const [dashboard, setDashboard] = useState(emptyDashboard);
   const [produtos, setProdutos] = useState([]);
   const [clientes, setClientes] = useState([]);
@@ -171,6 +193,27 @@ function App() {
   useEffect(() => {
     loadDashboard();
   }, []);
+
+  useLayoutEffect(() => {
+    const existingStyle = document.getElementById(currentDesignStyleId);
+
+    if (themeMode === "dark") {
+      existingStyle?.remove();
+      window.localStorage.setItem("acao-games-theme-mode", "dark");
+      return;
+    }
+
+    if (!existingStyle) {
+      const style = document.createElement("style");
+      style.id = currentDesignStyleId;
+      style.textContent = currentDesignStyleContent;
+      document.head.appendChild(style);
+    } else if (existingStyle.textContent !== currentDesignStyleContent) {
+      existingStyle.textContent = currentDesignStyleContent;
+    }
+
+    window.localStorage.setItem("acao-games-theme-mode", "light");
+  }, [themeMode]);
 
   async function loadDashboard() {
     setLoading(true);
@@ -230,6 +273,20 @@ function App() {
     setFeedback(null);
   }
 
+  function openEquipamentosPage() {
+    startTransition(() => {
+      setActiveSection("equipamentos");
+    });
+    setFeedback(null);
+  }
+
+  function openEstoquePage() {
+    startTransition(() => {
+      setActiveSection("produtos");
+    });
+    setFeedback(null);
+  }
+
   function handleMenuItem(item) {
     if (item.id === "dashboard") {
       navigateToDashboard();
@@ -238,6 +295,16 @@ function App() {
 
     if (item.id === "clientes") {
       openClientesPage();
+      return;
+    }
+
+    if (item.id === "equipamentos") {
+      openEquipamentosPage();
+      return;
+    }
+
+    if (item.id === "produtos") {
+      openEstoquePage();
       return;
     }
 
@@ -566,6 +633,7 @@ function App() {
   const recentSales = dashboard.vendasRecentes?.length
     ? dashboard.vendasRecentes.slice(0, 5)
     : produtos.slice(0, 5);
+  const isStandalonePage = activeSection === "clientes" || activeSection === "equipamentos" || activeSection === "produtos";
 
   return (
     <div className="app-shell">
@@ -589,6 +657,15 @@ function App() {
         </nav>
 
         <div className="header-actions">
+          <button
+            type="button"
+            className="header-link theme-toggle-button"
+            aria-pressed={themeMode === "dark"}
+            onClick={() => setThemeMode((current) => (current === "light" ? "dark" : "light"))}
+          >
+            <span className={`theme-toggle-icon theme-toggle-icon--${themeMode === "light" ? "dark" : "light"}`} aria-hidden="true" />
+            {themeMode === "light" ? "Tema escuro" : "Tema claro"}
+          </button>
           <button type="button" className="icon-button" aria-label="Notificacoes">
             <SvgIcon src={bellIcon} size={15} />
             <span className="notification-dot" />
@@ -622,7 +699,27 @@ function App() {
           />
         ) : null}
 
-        <div className={activeSection === "clientes" ? "screen-hidden" : "dashboard-view"}>
+        {activeSection === "equipamentos" ? (
+          <EquipamentosPage
+            clientes={clientes}
+            equipamentos={equipamentos}
+            ordens={ordens}
+            onClientesChange={setClientes}
+            onEquipamentosChange={setEquipamentos}
+            onOrdensChange={setOrdens}
+            onFeedback={setFeedback}
+          />
+        ) : null}
+
+        {activeSection === "produtos" ? (
+          <EstoquePage
+            produtos={produtos}
+            onProdutosChange={setProdutos}
+            onFeedback={setFeedback}
+          />
+        ) : null}
+
+        <div className={isStandalonePage ? "screen-hidden" : "dashboard-view"}>
         <section id="dashboard" className="hero-lobby">
           <div className="hero-lobby__center">
             <span className="section-label">Painel operacional</span>
