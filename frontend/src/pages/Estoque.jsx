@@ -9,7 +9,7 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
 
 const defaultCategories = ["Produto", "Acessorio", "Peca", "Insumo", "Servico"];
 const MAX_PRODUCT_PHOTO_BYTES = 512000;
-const allowedProductPhotoTypes = ["image/jpeg", "image/png", "image/webp"];
+const allowedProductPhotoTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
 function createEmptyProductForm() {
   return {
@@ -577,7 +577,7 @@ function ProductModal({ form, selectedProduct, saving, onClose, onSubmit, onChan
                         Escolher foto
                         <input
                           type="file"
-                          accept="image/jpeg,image/png,image/webp"
+                          accept="image/jpeg,image/jpg,image/png,image/webp"
                           onChange={(event) => onPhotoChange(event.target.files?.[0])}
                         />
                       </label>
