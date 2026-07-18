@@ -1,3 +1,9 @@
+@font-face {
+  font-family: "Alagard";
+  src: url("./assets/fonts/alagard.ttf") format("truetype");
+  font-display: swap;
+}
+
 :root {
   --bg: #101820;
   --panel: rgba(20, 29, 37, 0.92);
@@ -25,6 +31,7 @@
   --radius-lg: 9px;
   --radius-md: 8px;
   --radius-sm: 7px;
+  --error-font: "Alagard", "Inter", "Segoe UI", Arial, sans-serif;
 }
 
 * {
@@ -399,8 +406,10 @@ button:disabled {
   border-radius: var(--radius-sm);
   background: rgba(255, 100, 100, 0.1);
   color: #ffd2d2;
+  font-family: var(--error-font);
   font-size: 0.88rem;
   font-weight: 800;
+  letter-spacing: 0;
 }
 
 .login-submit {
@@ -548,7 +557,7 @@ button:disabled {
 
 .hero-cta__copy strong {
   color: #ffffff;
-  font-size: 0.98rem;
+  font-size: 0.9rem;
   font-weight: 900;
 }
 
@@ -618,6 +627,8 @@ button:disabled {
 .feedback--error {
   color: #ffd8d8;
   border-color: rgba(255, 100, 100, 0.28);
+  font-family: var(--error-font);
+  letter-spacing: 0;
 }
 
 .filters-bar {
@@ -898,7 +909,7 @@ td:first-child {
   min-height: 28px;
   padding: 0 10px;
   border-radius: 0;
-  font-size: 0.78rem;
+  font-size: 0.7rem;
   font-weight: 600;
 }
 
@@ -1350,6 +1361,13 @@ td:first-child {
   gap: 10px;
 }
 
+.sale-products-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
 .sale-item-row {
   display: grid;
   grid-template-columns: minmax(220px, 1fr) 82px 140px 140px auto;
@@ -1385,6 +1403,33 @@ td:first-child {
 
 .add-item-button {
   margin-top: 12px;
+}
+
+.quick-product-panel {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgba(112, 227, 255, 0.16);
+  border-radius: var(--radius-md);
+  background: rgba(17, 168, 199, 0.06);
+}
+
+.quick-product-panel__head,
+.quick-product-panel__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.quick-product-panel__head strong {
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.quick-product-panel__actions {
+  justify-content: flex-end;
 }
 
 .entry-modal__footer {

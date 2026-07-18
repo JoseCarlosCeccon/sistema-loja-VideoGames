@@ -1,6 +1,7 @@
 const API_URL = import.meta.env.VITE_API_URL || "/api";
 const DEFAULT_TIMEOUT_MS = 15000;
-const AUTH_STORAGE_KEY = "acao-games-auth-user";
+export const AUTH_STORAGE_KEY = "acao-games-auth-user";
+export const AUTH_REJECTED_EVENT = "acao-games-auth-rejected";
 
 function readAuthToken() {
   if (typeof window === "undefined") {
@@ -44,6 +45,10 @@ async function request(path, options = {}) {
 
     if (!response.ok) {
       const message = payload?.details || payload?.message || "Falha ao processar a requisicao.";
+      if (path !== "/usuarios/login" && (response.status === 401 || response.status === 403)) {
+        notifyAuthRejected(response.status, message);
+      }
+
       const requestError = new Error(message);
       requestError.status = response.status;
       requestError.payload = payload;
@@ -64,6 +69,19 @@ async function request(path, options = {}) {
   } finally {
     clearTimeout(timeoutId);
   }
+}
+
+function notifyAuthRejected(status, message) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.dispatchEvent(new CustomEvent(AUTH_REJECTED_EVENT, {
+    detail: {
+      status,
+      message: message || "Sua sessao expirou. Entre novamente."
+    }
+  }));
 }
 
 export const api = {

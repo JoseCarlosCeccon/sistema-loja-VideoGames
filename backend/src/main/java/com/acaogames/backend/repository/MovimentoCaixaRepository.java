@@ -7,9 +7,7 @@ import com.acaogames.backend.model.Venda;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.jdbc.core.RowMapper;
@@ -111,7 +109,7 @@ public class MovimentoCaixaRepository {
         BigDecimal total = jdbcTemplate.queryForObject(
                 "SELECT COALESCE(SUM(CASE WHEN tipo = 'ENTRADA' THEN valor ELSE -valor END), 0) "
                         + "FROM movimento_caixa WHERE DATE(data_movimento) = :data",
-                new MapSqlParameterSource("data", java.sql.Date.valueOf(data)),
+                new MapSqlParameterSource("data", JdbcTemporalValues.toDatabaseValue(data)),
                 BigDecimal.class
         );
         return total == null ? BigDecimal.ZERO : total;
@@ -127,7 +125,7 @@ public class MovimentoCaixaRepository {
                 .addValue("tipo", movimento.getTipo())
                 .addValue("descricao", movimento.getDescricao())
                 .addValue("valor", movimento.getValor())
-                .addValue("dataMovimento", toTimestamp(movimento.getDataMovimento()))
+                .addValue("dataMovimento", JdbcTemporalValues.toDatabaseValue(movimento.getDataMovimento()))
                 .addValue("formaPagamento", movimento.getFormaPagamento())
                 .addValue("categoria", movimento.getCategoria());
     }
@@ -157,7 +155,7 @@ public class MovimentoCaixaRepository {
                 movimento.setTipo(rs.getString("tipo"));
                 movimento.setDescricao(rs.getString("descricao"));
                 movimento.setValor(rs.getBigDecimal("valor"));
-                movimento.setDataMovimento(toLocalDateTime(rs.getTimestamp("data_movimento")));
+                movimento.setDataMovimento(JdbcTemporalValues.getLocalDateTime(rs, "data_movimento"));
                 movimento.setFormaPagamento(rs.getString("forma_pagamento"));
                 movimento.setCategoria(rs.getString("categoria"));
                 return movimento;
@@ -170,11 +168,4 @@ public class MovimentoCaixaRepository {
         return rs.wasNull() ? null : Long.valueOf(value);
     }
 
-    private Timestamp toTimestamp(LocalDateTime value) {
-        return value == null ? null : Timestamp.valueOf(value);
-    }
-
-    private LocalDateTime toLocalDateTime(Timestamp value) {
-        return value == null ? null : value.toLocalDateTime();
-    }
 }

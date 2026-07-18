@@ -5,8 +5,6 @@ import com.acaogames.backend.model.ProdutoFoto;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.jdbc.core.RowMapper;
@@ -20,7 +18,7 @@ import org.springframework.stereotype.Repository;
 public class ProdutoRepository {
 
     private static final String BASE_SELECT = "SELECT id_produto, nome, categoria, descricao, quantidade_estoque, "
-            + "estoque_minimo, valor_compra, valor_venda, ativo, data_cadastro, "
+            + "estoque_minimo, valor_compra, valor_venda, valor_venda_vista, valor_venda_prazo, ativo, data_cadastro, "
             + "(foto IS NOT NULL) AS possui_foto, foto_nome, foto_tipo, foto_tamanho FROM produto ";
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
@@ -44,8 +42,9 @@ public class ProdutoRepository {
 
     public Produto create(Produto produto) {
         String sql = "INSERT INTO produto(nome, categoria, descricao, quantidade_estoque, estoque_minimo, "
-                + "valor_compra, valor_venda, ativo) VALUES(:nome, :categoria, :descricao, :quantidadeEstoque, "
-                + ":estoqueMinimo, :valorCompra, :valorVenda, :ativo)";
+                + "valor_compra, valor_venda, valor_venda_vista, valor_venda_prazo, ativo) "
+                + "VALUES(:nome, :categoria, :descricao, :quantidadeEstoque, "
+                + ":estoqueMinimo, :valorCompra, :valorVenda, :valorVendaVista, :valorVendaPrazo, :ativo)";
         MapSqlParameterSource params = toParams(produto);
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcTemplate.update(sql, params, keyHolder, new String[]{"id_produto"});
@@ -59,7 +58,8 @@ public class ProdutoRepository {
     public Produto update(Produto produto) {
         String sql = "UPDATE produto SET nome = :nome, categoria = :categoria, descricao = :descricao, "
                 + "quantidade_estoque = :quantidadeEstoque, estoque_minimo = :estoqueMinimo, "
-                + "valor_compra = :valorCompra, valor_venda = :valorVenda, ativo = :ativo "
+                + "valor_compra = :valorCompra, valor_venda = :valorVenda, "
+                + "valor_venda_vista = :valorVendaVista, valor_venda_prazo = :valorVendaPrazo, ativo = :ativo "
                 + "WHERE id_produto = :idProduto";
         MapSqlParameterSource params = toParams(produto);
         params.addValue("idProduto", produto.getIdProduto());
@@ -160,7 +160,10 @@ public class ProdutoRepository {
 
     private MapSqlParameterSource toParams(Produto produto) {
         BigDecimal valorCompra = produto.getValorCompra() == null ? BigDecimal.ZERO : produto.getValorCompra();
-        BigDecimal valorVenda = produto.getValorVenda() == null ? BigDecimal.ZERO : produto.getValorVenda();
+        BigDecimal valorVendaVista = produto.getValorVendaVista() == null
+                ? (produto.getValorVenda() == null ? BigDecimal.ZERO : produto.getValorVenda())
+                : produto.getValorVendaVista();
+        BigDecimal valorVendaPrazo = produto.getValorVendaPrazo() == null ? valorVendaVista : produto.getValorVendaPrazo();
 
         return new MapSqlParameterSource()
                 .addValue("nome", produto.getNome())
@@ -169,7 +172,9 @@ public class ProdutoRepository {
                 .addValue("quantidadeEstoque", produto.getQuantidadeEstoque())
                 .addValue("estoqueMinimo", produto.getEstoqueMinimo())
                 .addValue("valorCompra", valorCompra)
-                .addValue("valorVenda", valorVenda)
+                .addValue("valorVenda", valorVendaVista)
+                .addValue("valorVendaVista", valorVendaVista)
+                .addValue("valorVendaPrazo", valorVendaPrazo)
                 .addValue("ativo", produto.isAtivo());
     }
 
@@ -186,19 +191,18 @@ public class ProdutoRepository {
                 produto.setEstoqueMinimo(rs.getInt("estoque_minimo"));
                 produto.setValorCompra(rs.getBigDecimal("valor_compra"));
                 produto.setValorVenda(rs.getBigDecimal("valor_venda"));
+                produto.setValorVendaVista(rs.getBigDecimal("valor_venda_vista"));
+                produto.setValorVendaPrazo(rs.getBigDecimal("valor_venda_prazo"));
                 produto.setPossuiFoto(rs.getBoolean("possui_foto"));
                 produto.setFotoNome(rs.getString("foto_nome"));
                 produto.setFotoTipo(rs.getString("foto_tipo"));
                 int fotoTamanho = rs.getInt("foto_tamanho");
                 produto.setFotoTamanho(rs.wasNull() ? null : Integer.valueOf(fotoTamanho));
                 produto.setAtivo(rs.getBoolean("ativo"));
-                produto.setDataCadastro(toLocalDateTime(rs.getTimestamp("data_cadastro")));
+                produto.setDataCadastro(JdbcTemporalValues.getLocalDateTime(rs, "data_cadastro"));
                 return produto;
             }
         };
     }
 
-    private LocalDateTime toLocalDateTime(Timestamp timestamp) {
-        return timestamp == null ? null : timestamp.toLocalDateTime();
-    }
 }

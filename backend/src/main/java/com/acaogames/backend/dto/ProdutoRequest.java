@@ -16,6 +16,8 @@ public class ProdutoRequest {
     private Integer estoqueMinimo;
     private BigDecimal valorCompra;
     private BigDecimal valorVenda;
+    private BigDecimal valorVendaVista;
+    private BigDecimal valorVendaPrazo;
     private Boolean ativo;
 
     public String getNome() {
@@ -72,6 +74,22 @@ public class ProdutoRequest {
 
     public void setValorVenda(BigDecimal valorVenda) {
         this.valorVenda = valorVenda;
+    }
+
+    public BigDecimal getValorVendaVista() {
+        return valorVendaVista;
+    }
+
+    public void setValorVendaVista(BigDecimal valorVendaVista) {
+        this.valorVendaVista = valorVendaVista;
+    }
+
+    public BigDecimal getValorVendaPrazo() {
+        return valorVendaPrazo;
+    }
+
+    public void setValorVendaPrazo(BigDecimal valorVendaPrazo) {
+        this.valorVendaPrazo = valorVendaPrazo;
     }
 
     public Boolean getAtivo() {

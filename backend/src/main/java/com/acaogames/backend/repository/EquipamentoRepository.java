@@ -3,8 +3,6 @@ package com.acaogames.backend.repository;
 import com.acaogames.backend.model.Equipamento;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.jdbc.core.RowMapper;
@@ -88,13 +86,10 @@ public class EquipamentoRepository {
                 equipamento.setModelo(rs.getString("modelo"));
                 equipamento.setDescricao(rs.getString("descricao"));
                 equipamento.setAtivo(rs.getBoolean("ativo"));
-                equipamento.setDataCadastro(toLocalDateTime(rs.getTimestamp("data_cadastro")));
+                equipamento.setDataCadastro(JdbcTemporalValues.getLocalDateTime(rs, "data_cadastro"));
                 return equipamento;
             }
         };
     }
 
-    private LocalDateTime toLocalDateTime(Timestamp timestamp) {
-        return timestamp == null ? null : timestamp.toLocalDateTime();
-    }
 }

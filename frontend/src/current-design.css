@@ -104,8 +104,8 @@ textarea:focus-visible {
   gap: 7px;
   padding: 0 13px;
   border-radius: var(--radius-sm);
-  font-size: 0.88rem;
-  font-weight: 700;
+  font-size: 0.85rem;
+  font-weight: 500;
 }
 
 .top-nav__item:hover {
@@ -813,6 +813,11 @@ td:first-child {
 
 .sale-item-subtotal strong {
   color: var(--cyan-soft);
+}
+
+.quick-product-panel {
+  border-color: #bddfe5;
+  background: #f3fbfc;
 }
 
 .entry-modal__footer {

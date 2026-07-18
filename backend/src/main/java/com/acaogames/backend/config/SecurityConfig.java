@@ -1,9 +1,11 @@
 package com.acaogames.backend.config;
 
 import com.acaogames.backend.security.AuthTokenFilter;
+import javax.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -29,6 +31,18 @@ public class SecurityConfig {
                 .cors().and()
                 .httpBasic().disable()
                 .formLogin().disable()
+                .exceptionHandling()
+                .authenticationEntryPoint((request, response, authException) -> writeAuthError(
+                        response,
+                        HttpServletResponse.SC_UNAUTHORIZED,
+                        "Sessao expirada ou token invalido."
+                ))
+                .accessDeniedHandler((request, response, accessDeniedException) -> writeAuthError(
+                        response,
+                        HttpServletResponse.SC_FORBIDDEN,
+                        "Acesso negado."
+                ))
+                .and()
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS).and()
                 .authorizeRequests()
                 .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
@@ -42,5 +56,11 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    private void writeAuthError(HttpServletResponse response, int status, String message) throws java.io.IOException {
+        response.setStatus(status);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.getWriter().write("{\"status\":" + status + ",\"message\":\"" + message + "\"}");
     }
 }

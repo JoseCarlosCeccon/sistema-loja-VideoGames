@@ -22,7 +22,9 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -217,8 +219,22 @@ public class VendaService {
     }
 
     private void preencherItens(List<Venda> vendas) {
+        List<Long> idsVenda = new ArrayList<Long>();
+        Map<Long, List<ItemVenda>> itensPorVenda = new LinkedHashMap<Long, List<ItemVenda>>();
         for (Venda venda : vendas) {
-            venda.setItens(itemVendaRepository.findByVendaId(venda.getIdVenda()));
+            idsVenda.add(venda.getIdVenda());
+            itensPorVenda.put(venda.getIdVenda(), new ArrayList<ItemVenda>());
+        }
+
+        for (ItemVenda item : itemVendaRepository.findByVendaIds(idsVenda)) {
+            List<ItemVenda> itens = itensPorVenda.get(item.getVenda().getIdVenda());
+            if (itens != null) {
+                itens.add(item);
+            }
+        }
+
+        for (Venda venda : vendas) {
+            venda.setItens(itensPorVenda.get(venda.getIdVenda()));
         }
     }
 

@@ -3,8 +3,6 @@ package com.acaogames.backend.repository;
 import com.acaogames.backend.model.Cliente;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.jdbc.core.RowMapper;
@@ -98,13 +96,10 @@ public class ClienteRepository {
                 cliente.setEmail(rs.getString("email"));
                 cliente.setObservacoes(rs.getString("observacoes"));
                 cliente.setAtivo(rs.getBoolean("ativo"));
-                cliente.setDataCadastro(toLocalDateTime(rs.getTimestamp("data_cadastro")));
+                cliente.setDataCadastro(JdbcTemporalValues.getLocalDateTime(rs, "data_cadastro"));
                 return cliente;
             }
         };
     }
 
-    private LocalDateTime toLocalDateTime(Timestamp timestamp) {
-        return timestamp == null ? null : timestamp.toLocalDateTime();
-    }
 }

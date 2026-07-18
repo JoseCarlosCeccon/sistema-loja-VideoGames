@@ -5,8 +5,6 @@ import com.acaogames.backend.model.Produto;
 import com.acaogames.backend.model.UsuarioSistema;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.jdbc.core.RowMapper;
@@ -67,7 +65,7 @@ public class MovimentacaoEstoqueRepository {
                 .addValue("idUsuario", movimentacao.getUsuario().getIdUsuario())
                 .addValue("tipo", movimentacao.getTipo())
                 .addValue("quantidade", movimentacao.getQuantidade())
-                .addValue("dataMovimentacao", toTimestamp(movimentacao.getDataMovimentacao()))
+                .addValue("dataMovimentacao", JdbcTemporalValues.toDatabaseValue(movimentacao.getDataMovimentacao()))
                 .addValue("motivo", movimentacao.getMotivo())
                 .addValue("observacoes", movimentacao.getObservacoes());
     }
@@ -88,7 +86,7 @@ public class MovimentacaoEstoqueRepository {
                 movimentacao.setUsuario(usuario);
                 movimentacao.setTipo(rs.getString("tipo"));
                 movimentacao.setQuantidade(rs.getInt("quantidade"));
-                movimentacao.setDataMovimentacao(toLocalDateTime(rs.getTimestamp("data_movimentacao")));
+                movimentacao.setDataMovimentacao(JdbcTemporalValues.getLocalDateTime(rs, "data_movimentacao"));
                 movimentacao.setMotivo(rs.getString("motivo"));
                 movimentacao.setObservacoes(rs.getString("observacoes"));
                 return movimentacao;
@@ -96,11 +94,4 @@ public class MovimentacaoEstoqueRepository {
         };
     }
 
-    private Timestamp toTimestamp(LocalDateTime value) {
-        return value == null ? null : Timestamp.valueOf(value);
-    }
-
-    private LocalDateTime toLocalDateTime(Timestamp value) {
-        return value == null ? null : value.toLocalDateTime();
-    }
 }

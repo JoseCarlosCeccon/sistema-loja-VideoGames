@@ -6,12 +6,9 @@ import com.acaogames.backend.model.Equipamento;
 import com.acaogames.backend.model.OrdemServico;
 import com.acaogames.backend.model.UsuarioSistema;
 import java.math.BigDecimal;
-import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -119,7 +116,7 @@ public class OrdemServicoRepository {
     public BigDecimal sumValorServicoByDataSaida(LocalDate dataSaida) {
         BigDecimal total = jdbcTemplate.queryForObject(
                 "SELECT COALESCE(SUM(valor_servico), 0) FROM ordem_servico WHERE data_saida = :dataSaida",
-                new MapSqlParameterSource("dataSaida", toDate(dataSaida)),
+                new MapSqlParameterSource("dataSaida", JdbcTemporalValues.toDatabaseValue(dataSaida)),
                 BigDecimal.class
         );
         return total == null ? BigDecimal.ZERO : total;
@@ -157,13 +154,13 @@ public class OrdemServicoRepository {
                 .addValue("idUsuario", ordemServico.getUsuario().getIdUsuario())
                 .addValue("numeroSerie", ordemServico.getNumeroSerie())
                 .addValue("cor", ordemServico.getCor())
-                .addValue("dataEntrada", toDate(ordemServico.getDataEntrada()))
+                .addValue("dataEntrada", JdbcTemporalValues.toDatabaseValue(ordemServico.getDataEntrada()))
                 .addValue("problemaRelatado", ordemServico.getProblemaRelatado())
                 .addValue("status", ordemServico.getStatus())
                 .addValue("diagnostico", ordemServico.getDiagnostico())
                 .addValue("servicoRealizado", ordemServico.getServicoRealizado())
                 .addValue("valorServico", ordemServico.getValorServico())
-                .addValue("dataSaida", toDate(ordemServico.getDataSaida()))
+                .addValue("dataSaida", JdbcTemporalValues.toDatabaseValue(ordemServico.getDataSaida()))
                 .addValue("observacoes", ordemServico.getObservacoes());
     }
 
@@ -180,7 +177,7 @@ public class OrdemServicoRepository {
                 cliente.setEmail(rs.getString("cliente_email"));
                 cliente.setObservacoes(rs.getString("cliente_observacoes"));
                 cliente.setAtivo(rs.getBoolean("cliente_ativo"));
-                cliente.setDataCadastro(toLocalDateTime(rs.getTimestamp("cliente_data_cadastro")));
+                cliente.setDataCadastro(JdbcTemporalValues.getLocalDateTime(rs, "cliente_data_cadastro"));
 
                 Equipamento equipamento = new Equipamento();
                 equipamento.setIdEquipamento(rs.getLong("equipamento_ref_id"));
@@ -189,7 +186,7 @@ public class OrdemServicoRepository {
                 equipamento.setModelo(rs.getString("equipamento_modelo"));
                 equipamento.setDescricao(rs.getString("equipamento_descricao"));
                 equipamento.setAtivo(rs.getBoolean("equipamento_ativo"));
-                equipamento.setDataCadastro(toLocalDateTime(rs.getTimestamp("equipamento_data_cadastro")));
+                equipamento.setDataCadastro(JdbcTemporalValues.getLocalDateTime(rs, "equipamento_data_cadastro"));
 
                 UsuarioSistema usuario = new UsuarioSistema();
                 usuario.setIdUsuario(rs.getLong("usuario_ref_id"));
@@ -197,7 +194,7 @@ public class OrdemServicoRepository {
                 usuario.setLogin(rs.getString("usuario_login"));
                 usuario.setPerfil(rs.getString("usuario_perfil"));
                 usuario.setAtivo(rs.getBoolean("usuario_ativo"));
-                usuario.setDataCadastro(toLocalDateTime(rs.getTimestamp("usuario_data_cadastro")));
+                usuario.setDataCadastro(JdbcTemporalValues.getLocalDateTime(rs, "usuario_data_cadastro"));
 
                 OrdemServico ordemServico = new OrdemServico();
                 ordemServico.setIdOrdemServico(rs.getLong("id_ordem_servico"));
@@ -206,30 +203,19 @@ public class OrdemServicoRepository {
                 ordemServico.setUsuario(usuario);
                 ordemServico.setNumeroSerie(rs.getString("numero_serie"));
                 ordemServico.setCor(rs.getString("cor"));
-                ordemServico.setDataEntrada(toLocalDate(rs.getDate("data_entrada")));
+                ordemServico.setDataEntrada(JdbcTemporalValues.getLocalDate(rs, "data_entrada"));
                 ordemServico.setProblemaRelatado(rs.getString("problema_relatado"));
                 ordemServico.setStatus(rs.getString("status"));
                 ordemServico.setDiagnostico(rs.getString("diagnostico"));
                 ordemServico.setServicoRealizado(rs.getString("servico_realizado"));
                 ordemServico.setValorServico(rs.getBigDecimal("valor_servico"));
-                ordemServico.setDataSaida(toLocalDate(rs.getDate("data_saida")));
+                ordemServico.setDataSaida(JdbcTemporalValues.getLocalDate(rs, "data_saida"));
                 ordemServico.setObservacoes(rs.getString("observacoes"));
-                ordemServico.setDataCriacao(toLocalDateTime(rs.getTimestamp("data_criacao")));
-                ordemServico.setDataAtualizacao(toLocalDateTime(rs.getTimestamp("data_atualizacao")));
+                ordemServico.setDataCriacao(JdbcTemporalValues.getLocalDateTime(rs, "data_criacao"));
+                ordemServico.setDataAtualizacao(JdbcTemporalValues.getLocalDateTime(rs, "data_atualizacao"));
                 return ordemServico;
             }
         };
     }
 
-    private Date toDate(LocalDate localDate) {
-        return localDate == null ? null : Date.valueOf(localDate);
-    }
-
-    private LocalDate toLocalDate(Date date) {
-        return date == null ? null : date.toLocalDate();
-    }
-
-    private LocalDateTime toLocalDateTime(Timestamp timestamp) {
-        return timestamp == null ? null : timestamp.toLocalDateTime();
-    }
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../services/api";
 import searchIcon from "../assets/icons/search.svg";
+import { formatCpf, formatPhone } from "../utils/masks";
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -22,8 +23,8 @@ function createEmptyClienteForm() {
 function clienteToForm(cliente) {
   return {
     nome: cliente?.nome || "",
-    telefone: cliente?.telefone || "",
-    cpf: cliente?.cpf || "",
+    telefone: formatPhone(cliente?.telefone),
+    cpf: formatCpf(cliente?.cpf),
     endereco: cliente?.endereco || "",
     email: cliente?.email || "",
     observacoes: cliente?.observacoes || "",
@@ -34,8 +35,8 @@ function clienteToForm(cliente) {
 function buildClientePayload(form) {
   return {
     nome: String(form.nome || "").trim(),
-    telefone: String(form.telefone || "").trim(),
-    cpf: optionalText(form.cpf),
+    telefone: formatPhone(form.telefone),
+    cpf: optionalText(formatCpf(form.cpf)),
     endereco: optionalText(form.endereco),
     email: optionalText(form.email),
     observacoes: optionalText(form.observacoes),
@@ -117,9 +118,15 @@ export default function ClientesPage({
   }
 
   function updateClienteField(field, value) {
+    const formattedValue = field === "telefone"
+      ? formatPhone(value)
+      : field === "cpf"
+        ? formatCpf(value)
+        : value;
+
     setClienteForm((current) => ({
       ...current,
-      [field]: value
+      [field]: formattedValue
     }));
   }
 
@@ -477,14 +484,27 @@ function ClienteModal({ form, selectedCliente, saving, onClose, onSubmit, onChan
                 </label>
                 <label className="field">
                   <span>Telefone</span>
-                  <input required value={form.telefone} onChange={(event) => onChange("telefone", event.target.value)} />
+                  <input
+                    required
+                    inputMode="numeric"
+                    maxLength={15}
+                    placeholder="(28) 99999-9999"
+                    value={form.telefone}
+                    onChange={(event) => onChange("telefone", event.target.value)}
+                  />
                 </label>
                 <label className="field">
-                  <span>CPF</span>
-                  <input value={form.cpf} onChange={(event) => onChange("cpf", event.target.value)} />
+                  <span>CPF opcional</span>
+                  <input
+                    inputMode="numeric"
+                    maxLength={14}
+                    placeholder="000.000.000-00"
+                    value={form.cpf}
+                    onChange={(event) => onChange("cpf", event.target.value)}
+                  />
                 </label>
                 <label className="field">
-                  <span>Email</span>
+                  <span>Email opcional</span>
                   <input type="email" value={form.email} onChange={(event) => onChange("email", event.target.value)} />
                 </label>
                 <label className="field field--wide">

@@ -1,11 +1,7 @@
-import { startTransition, useEffect, useLayoutEffect, useState } from "react";
-import { api } from "./services/api";
-import CaixaPage from "./pages/Caixa";
-import ClientesPage from "./pages/Clientes";
-import EquipamentosPage from "./pages/Equipamentos";
-import EstoquePage from "./pages/Estoque";
+import { lazy, startTransition, Suspense, useEffect, useLayoutEffect, useState } from "react";
+import { api, AUTH_REJECTED_EVENT, AUTH_STORAGE_KEY } from "./services/api";
 import LoginPage from "./pages/Login";
-import RelatoriosPage from "./pages/Relatorios";
+import { formatCpf, formatPhone } from "./utils/masks";
 import currentDesignCss from "./current-design.css?raw";
 import fundoPersonagensUrl from "./assets/images/FUNDO DE PERSONAGENS.jpg";
 import logoAcaoGames from "./assets/images/logo acao games.jpg";
@@ -19,6 +15,12 @@ import homeIcon from "./assets/icons/home.svg";
 import packageIcon from "./assets/icons/package.svg";
 import cashRegisterIcon from "./assets/icons/phosphor_cash_register.svg";
 import userIcon from "./assets/icons/user.svg";
+
+const CaixaPage = lazy(() => import("./pages/Caixa"));
+const ClientesPage = lazy(() => import("./pages/Clientes"));
+const EquipamentosPage = lazy(() => import("./pages/Equipamentos"));
+const EstoquePage = lazy(() => import("./pages/Estoque"));
+const RelatoriosPage = lazy(() => import("./pages/Relatorios"));
 
 const navItems = [
   { id: "dashboard", label: "Home", icon: <SvgIcon src={homeIcon} size={14} /> },
@@ -73,6 +75,7 @@ const formasPagamento = [
   { value: "CARTAO_DEBITO", label: "Cartao debito" },
   { value: "CARTAO_CREDITO", label: "Cartao credito" }
 ];
+const categoriasProduto = ["Produto", "Acessorio", "Peca", "Insumo", "Servico"];
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -80,7 +83,7 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
 });
 
 const currentDesignStyleId = "acao-games-current-design";
-const authStorageKey = "acao-games-auth-user";
+const authStorageKey = AUTH_STORAGE_KEY;
 const currentDesignStyleContent = currentDesignCss.replace(
   /url\("\.\/assets\/images\/FUNDO DE PERSONAGENS\.jpg"\)/g,
   `url("${fundoPersonagensUrl}")`
@@ -108,6 +111,7 @@ function App() {
   const [ordens, setOrdens] = useState([]);
   const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState(null);
+  const [authNotice, setAuthNotice] = useState("");
   const [entradaModalOpen, setEntradaModalOpen] = useState(false);
   const [saidaModalOpen, setSaidaModalOpen] = useState(false);
   const [vendaModalOpen, setVendaModalOpen] = useState(false);
@@ -116,10 +120,38 @@ function App() {
   const [entradaForm, setEntradaForm] = useState(createEmptyEntradaForm);
   const [saidaForm, setSaidaForm] = useState(createEmptySaidaForm);
   const [vendaForm, setVendaForm] = useState(createEmptyVendaForm);
+  const [vendaProductFormOpen, setVendaProductFormOpen] = useState(false);
+  const [vendaProductTargetIndex, setVendaProductTargetIndex] = useState(0);
+  const [vendaProductForm, setVendaProductForm] = useState(createEmptyVendaProductForm);
   const [savingEntrada, setSavingEntrada] = useState(false);
   const [savingSaida, setSavingSaida] = useState(false);
   const [savingVenda, setSavingVenda] = useState(false);
+  const [savingVendaProduct, setSavingVendaProduct] = useState(false);
   const [createdOrder, setCreatedOrder] = useState(null);
+
+  useEffect(() => {
+    function handleAuthRejected(event) {
+      window.localStorage.removeItem(authStorageKey);
+      setAuthUser(null);
+      setAuthNotice(event.detail?.message || "Sua sessao expirou. Entre novamente.");
+      setFeedback(null);
+      setDashboard(emptyDashboard);
+      setProdutos([]);
+      setClientes([]);
+      setEquipamentos([]);
+      setOrdens([]);
+      setEntradaModalOpen(false);
+      setSaidaModalOpen(false);
+      setVendaModalOpen(false);
+      setVendaProductFormOpen(false);
+      startTransition(() => {
+        setActiveSection("dashboard");
+      });
+    }
+
+    window.addEventListener(AUTH_REJECTED_EVENT, handleAuthRejected);
+    return () => window.removeEventListener(AUTH_REJECTED_EVENT, handleAuthRejected);
+  }, []);
 
   useEffect(() => {
     if (authUser) {
@@ -197,12 +229,14 @@ function App() {
 
     setAuthUser(sessionUser);
     window.localStorage.setItem(authStorageKey, JSON.stringify(sessionUser));
+    setAuthNotice("");
     setFeedback(null);
   }
 
   function handleLogout() {
     window.localStorage.removeItem(authStorageKey);
     setAuthUser(null);
+    setAuthNotice("");
     setFeedback(null);
     startTransition(() => {
       setActiveSection("dashboard");
@@ -322,12 +356,25 @@ function App() {
     setEntradaModalOpen(false);
   }
 
-  function openSaidaModal() {
+  function openSaidaModal(ordem = null) {
     startTransition(() => {
       setActiveSection("saida");
     });
     setFeedback(null);
-    setSaidaForm(createEmptySaidaForm());
+    setSaidaForm(() => {
+      const nextForm = createEmptySaidaForm();
+      if (!ordem?.idOrdemServico) {
+        return nextForm;
+      }
+
+      return {
+        ...nextForm,
+        idOrdemServico: String(ordem.idOrdemServico),
+        valorServico: ordem.valorServico != null ? String(ordem.valorServico) : "",
+        diagnostico: ordem.diagnostico || "",
+        servicoRealizado: ordem.servicoRealizado || ""
+      };
+    });
     setSaidaModalOpen(true);
   }
 
@@ -344,14 +391,18 @@ function App() {
     });
     setFeedback(null);
     setVendaForm(createEmptyVendaForm());
+    setVendaProductForm(createEmptyVendaProductForm());
+    setVendaProductFormOpen(false);
+    setVendaProductTargetIndex(0);
     setVendaModalOpen(true);
   }
 
   function closeVendaModal() {
-    if (savingVenda) {
+    if (savingVenda || savingVendaProduct) {
       return;
     }
     setVendaModalOpen(false);
+    setVendaProductFormOpen(false);
   }
 
   function resetEntradaForm() {
@@ -362,9 +413,15 @@ function App() {
   }
 
   function updateEntradaField(field, value) {
+    const formattedValue = field === "clienteTelefone"
+      ? formatPhone(value)
+      : field === "clienteCpf"
+        ? formatCpf(value)
+        : value;
+
     setEntradaForm((current) => ({
       ...current,
-      [field]: value
+      [field]: formattedValue
     }));
   }
 
@@ -389,10 +446,30 @@ function App() {
   }
 
   function updateVendaField(field, value) {
-    setVendaForm((current) => ({
-      ...current,
-      [field]: value
-    }));
+    setVendaForm((current) => {
+      if (field !== "formaPagamento") {
+        return {
+          ...current,
+          [field]: value
+        };
+      }
+
+      return {
+        ...current,
+        formaPagamento: value,
+        itens: current.itens.map((item) => {
+          const produto = produtos.find((produtoItem) => String(produtoItem.idProduto) === String(item.idProduto));
+          if (!produto) {
+            return item;
+          }
+
+          return {
+            ...item,
+            valorUnitario: String(productSalePrice(produto, value))
+          };
+        })
+      };
+    });
   }
 
   function updateVendaItem(index, field, value) {
@@ -407,7 +484,7 @@ function App() {
           return {
             ...item,
             idProduto: value,
-            valorUnitario: produto?.valorVenda ? String(produto.valorVenda) : item.valorUnitario
+            valorUnitario: produto ? String(productSalePrice(produto, current.formaPagamento)) : item.valorUnitario
           };
         }
 
@@ -432,12 +509,102 @@ function App() {
   }
 
   function removeVendaItem(index) {
+    setVendaProductFormOpen(false);
     setVendaForm((current) => ({
       ...current,
       itens: current.itens.length > 1
         ? current.itens.filter((_, itemIndex) => itemIndex !== index)
         : current.itens
     }));
+  }
+
+  function openVendaProductForm(index = 0) {
+    setVendaProductTargetIndex(index);
+    setVendaProductForm(createEmptyVendaProductForm());
+    setVendaProductFormOpen(true);
+    setFeedback(null);
+  }
+
+  function closeVendaProductForm() {
+    if (savingVendaProduct) {
+      return;
+    }
+
+    setVendaProductFormOpen(false);
+  }
+
+  function updateVendaProductField(field, value) {
+    setVendaProductForm((current) => ({
+      ...current,
+      [field]: value
+    }));
+  }
+
+  async function handleVendaProductSubmit(event) {
+    event.preventDefault();
+
+    const payload = buildVendaProductPayload(vendaProductForm);
+    if (!payload.nome || !payload.categoria) {
+      setFeedback({ type: "error", message: "Informe nome e categoria para cadastrar o produto." });
+      return;
+    }
+
+    if (hasNegativeProductNumbers(vendaProductForm)) {
+      setFeedback({ type: "error", message: "Quantidade, estoque minimo e valores nao podem ser negativos." });
+      return;
+    }
+
+    setSavingVendaProduct(true);
+    setFeedback(null);
+
+    try {
+      const produto = await api.post("/produtos", payload);
+      const idProduto = produto?.idProduto;
+
+      if (idProduto) {
+        setProdutos((current) => {
+          const lista = Array.isArray(current) ? current : [];
+          if (lista.some((item) => String(item.idProduto) === String(idProduto))) {
+            return lista.map((item) => String(item.idProduto) === String(idProduto) ? produto : item);
+          }
+
+          return [...lista, produto];
+        });
+
+        setVendaForm((current) => {
+          const targetIndex = Math.min(Number(vendaProductTargetIndex) || 0, current.itens.length - 1);
+          return {
+            ...current,
+            itens: current.itens.map((item, itemIndex) => {
+              if (itemIndex !== targetIndex) {
+                return item;
+              }
+
+              return {
+                ...item,
+                idProduto: String(idProduto),
+                quantidade: item.quantidade || 1,
+                valorUnitario: String(productSalePrice(produto, current.formaPagamento))
+              };
+            })
+          };
+        });
+      }
+
+      setVendaProductForm(createEmptyVendaProductForm());
+      setVendaProductFormOpen(false);
+      setFeedback({
+        type: "success",
+        message: `Produto ${produto?.nome || payload.nome} cadastrado e selecionado na venda.`
+      });
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        message: error.message || "Nao foi possivel cadastrar o produto."
+      });
+    } finally {
+      setSavingVendaProduct(false);
+    }
   }
 
   async function handleEntradaSubmit(event, shouldOpenPdf = false) {
@@ -576,8 +743,8 @@ function App() {
 
     return api.post("/clientes", {
       nome: entradaForm.clienteNome,
-      telefone: entradaForm.clienteTelefone,
-      cpf: optionalText(entradaForm.clienteCpf),
+      telefone: formatPhone(entradaForm.clienteTelefone),
+      cpf: optionalText(formatCpf(entradaForm.clienteCpf)),
       endereco: optionalText(entradaForm.clienteEndereco),
       email: optionalText(entradaForm.clienteEmail),
       observacoes: optionalText(entradaForm.clienteObservacoes),
@@ -614,7 +781,7 @@ function App() {
     || activeSection === "relatorios";
 
   if (!authUser) {
-    return <LoginPage onAuthenticated={handleAuthenticated} />;
+    return <LoginPage message={authNotice} onAuthenticated={handleAuthenticated} />;
   }
 
   return (
@@ -665,46 +832,49 @@ function App() {
           </div>
         ) : null}
 
-        {activeSection === "clientes" ? (
-          <ClientesPage
-            clientes={clientes}
-            onClientesChange={setClientes}
-            onFeedback={setFeedback}
-          />
-        ) : null}
+        <Suspense fallback={<div className="empty-state">Carregando pagina...</div>}>
+          {activeSection === "clientes" ? (
+            <ClientesPage
+              clientes={clientes}
+              onClientesChange={setClientes}
+              onFeedback={setFeedback}
+            />
+          ) : null}
 
-        {activeSection === "equipamentos" ? (
-          <EquipamentosPage
-            clientes={clientes}
-            equipamentos={equipamentos}
-            ordens={ordens}
-            onClientesChange={setClientes}
-            onEquipamentosChange={setEquipamentos}
-            onOrdensChange={setOrdens}
-            onFeedback={setFeedback}
-          />
-        ) : null}
+          {activeSection === "equipamentos" ? (
+            <EquipamentosPage
+              clientes={clientes}
+              equipamentos={equipamentos}
+              ordens={ordens}
+              onClientesChange={setClientes}
+              onEquipamentosChange={setEquipamentos}
+              onOrdensChange={setOrdens}
+              onFeedback={setFeedback}
+              onOpenSaida={openSaidaModal}
+            />
+          ) : null}
 
-        {activeSection === "produtos" ? (
-          <EstoquePage
-            produtos={produtos}
-            onProdutosChange={setProdutos}
-            onFeedback={setFeedback}
-          />
-        ) : null}
+          {activeSection === "produtos" ? (
+            <EstoquePage
+              produtos={produtos}
+              onProdutosChange={setProdutos}
+              onFeedback={setFeedback}
+            />
+          ) : null}
 
-        {activeSection === "caixa" ? (
-          <CaixaPage
-            onFeedback={setFeedback}
-            onDashboardRefresh={loadDashboard}
-          />
-        ) : null}
+          {activeSection === "caixa" ? (
+            <CaixaPage
+              onFeedback={setFeedback}
+              onDashboardRefresh={loadDashboard}
+            />
+          ) : null}
 
-        {activeSection === "relatorios" ? (
-          <RelatoriosPage
-            onFeedback={setFeedback}
-          />
-        ) : null}
+          {activeSection === "relatorios" ? (
+            <RelatoriosPage
+              onFeedback={setFeedback}
+            />
+          ) : null}
+        </Suspense>
 
         <div className={isStandalonePage ? "screen-hidden" : "dashboard-view"}>
         <section id="dashboard" className="hero-lobby">
@@ -836,14 +1006,24 @@ function App() {
         <VendaModal
           clientes={clientes}
           produtos={produtos}
+          categoriasProduto={categoriasProduto}
           form={vendaForm}
           saving={savingVenda}
+          productFormOpen={vendaProductFormOpen}
+          productTargetIndex={vendaProductTargetIndex}
+          productForm={vendaProductForm}
+          savingProduct={savingVendaProduct}
           onClose={closeVendaModal}
           onSubmit={handleVendaSubmit}
           onChange={updateVendaField}
           onItemChange={updateVendaItem}
           onAddItem={addVendaItem}
           onRemoveItem={removeVendaItem}
+          onOpenProductForm={openVendaProductForm}
+          onCloseProductForm={closeVendaProductForm}
+          onProductTargetChange={(value) => setVendaProductTargetIndex(Number(value) || 0)}
+          onProductChange={updateVendaProductField}
+          onProductSubmit={handleVendaProductSubmit}
         />
       ) : null}
     </div>
@@ -931,14 +1111,27 @@ function EntradaModal({
                   </label>
                   <label className="field">
                     <span>Telefone</span>
-                    <input required value={form.clienteTelefone} onChange={(event) => onChange("clienteTelefone", event.target.value)} />
+                    <input
+                      required
+                      inputMode="numeric"
+                      maxLength={15}
+                      placeholder="(28) 99999-9999"
+                      value={form.clienteTelefone}
+                      onChange={(event) => onChange("clienteTelefone", event.target.value)}
+                    />
                   </label>
                   <label className="field">
-                    <span>CPF</span>
-                    <input value={form.clienteCpf} onChange={(event) => onChange("clienteCpf", event.target.value)} />
+                    <span>CPF opcional</span>
+                    <input
+                      inputMode="numeric"
+                      maxLength={14}
+                      placeholder="000.000.000-00"
+                      value={form.clienteCpf}
+                      onChange={(event) => onChange("clienteCpf", event.target.value)}
+                    />
                   </label>
                   <label className="field">
-                    <span>Email</span>
+                    <span>Email opcional</span>
                     <input type="email" value={form.clienteEmail} onChange={(event) => onChange("clienteEmail", event.target.value)} />
                   </label>
                   <label className="field field--wide">
@@ -1197,14 +1390,24 @@ function SaidaModal({ ordens, form, saving, onClose, onSubmit, onChange }) {
 function VendaModal({
   clientes,
   produtos,
+  categoriasProduto,
   form,
   saving,
+  productFormOpen,
+  productTargetIndex,
+  productForm,
+  savingProduct,
   onClose,
   onSubmit,
   onChange,
   onItemChange,
   onAddItem,
-  onRemoveItem
+  onRemoveItem,
+  onOpenProductForm,
+  onCloseProductForm,
+  onProductTargetChange,
+  onProductChange,
+  onProductSubmit
 }) {
   const total = calculateVendaTotal(form.itens);
 
@@ -1307,9 +1510,114 @@ function VendaModal({
                   );
                 })}
               </div>
-              <button type="button" className="secondary-button add-item-button" onClick={onAddItem}>
-                Adicionar produto
-              </button>
+              <div className="sale-products-actions">
+                <button type="button" className="secondary-button" onClick={onAddItem}>
+                  Adicionar produto
+                </button>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => onOpenProductForm(Math.max(form.itens.length - 1, 0))}
+                >
+                  Criar produto
+                </button>
+              </div>
+              {productFormOpen ? (
+                <div className="quick-product-panel">
+                  <div className="quick-product-panel__head">
+                    <strong>Novo produto</strong>
+                    <button type="button" className="ghost-button" onClick={onCloseProductForm} disabled={savingProduct}>
+                      Fechar
+                    </button>
+                  </div>
+                  <div className="form-grid-three">
+                    <label className="field">
+                      <span>Linha da venda</span>
+                      <select value={productTargetIndex} onChange={(event) => onProductTargetChange(event.target.value)}>
+                        {form.itens.map((_, index) => (
+                          <option key={index} value={index}>Item {index + 1}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="field">
+                      <span>Nome</span>
+                      <input value={productForm.nome} onChange={(event) => onProductChange("nome", event.target.value)} />
+                    </label>
+                    <label className="field">
+                      <span>Categoria</span>
+                      <input
+                        list="sale-product-categories"
+                        value={productForm.categoria}
+                        onChange={(event) => onProductChange("categoria", event.target.value)}
+                      />
+                      <datalist id="sale-product-categories">
+                        {categoriasProduto.map((categoria) => (
+                          <option key={categoria} value={categoria} />
+                        ))}
+                      </datalist>
+                    </label>
+                    <label className="field">
+                      <span>Quantidade</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={productForm.quantidadeEstoque}
+                        onChange={(event) => onProductChange("quantidadeEstoque", event.target.value)}
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Estoque minimo</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={productForm.estoqueMinimo}
+                        onChange={(event) => onProductChange("estoqueMinimo", event.target.value)}
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Valor de compra</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={productForm.valorCompra}
+                        onChange={(event) => onProductChange("valorCompra", event.target.value)}
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Valor a vista</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={productForm.valorVenda}
+                        onChange={(event) => onProductChange("valorVenda", event.target.value)}
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Valor a prazo</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={productForm.valorVendaPrazo}
+                        onChange={(event) => onProductChange("valorVendaPrazo", event.target.value)}
+                      />
+                    </label>
+                    <label className="field field--wide">
+                      <span>Descricao</span>
+                      <textarea rows="2" value={productForm.descricao} onChange={(event) => onProductChange("descricao", event.target.value)} />
+                    </label>
+                  </div>
+                  <div className="quick-product-panel__actions">
+                    <button type="button" className="primary-button" onClick={onProductSubmit} disabled={savingProduct}>
+                      {savingProduct ? "Cadastrando..." : "Cadastrar e selecionar"}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
               {!produtos.length ? (
                 <p className="form-hint">Nenhum produto cadastrado para venda.</p>
               ) : null}
@@ -1455,6 +1763,34 @@ function createEmptyVendaForm() {
   };
 }
 
+function createEmptyVendaProductForm() {
+  return {
+    nome: "",
+    categoria: "Produto",
+    descricao: "",
+    quantidadeEstoque: 1,
+    estoqueMinimo: 0,
+    valorCompra: 0,
+    valorVenda: 0,
+    valorVendaPrazo: 0
+  };
+}
+
+function buildVendaProductPayload(form) {
+  return {
+    nome: String(form.nome || "").trim(),
+    categoria: String(form.categoria || "").trim(),
+    descricao: optionalText(form.descricao),
+    quantidadeEstoque: toNonNegativeInteger(form.quantidadeEstoque),
+    estoqueMinimo: toNonNegativeInteger(form.estoqueMinimo),
+    valorCompra: parseMoney(form.valorCompra),
+    valorVenda: parseMoney(form.valorVenda),
+    valorVendaVista: parseMoney(form.valorVenda),
+    valorVendaPrazo: parseMoney(form.valorVendaPrazo),
+    ativo: true
+  };
+}
+
 function buildEntradaObservacoes(form) {
   return [
     form.observacoes ? `Observacoes: ${form.observacoes}` : "",
@@ -1473,6 +1809,46 @@ function calculateVendaTotal(itens) {
   return itens.reduce((total, item) => {
     return total + Number(item.quantidade || 0) * parseMoney(item.valorUnitario);
   }, 0);
+}
+
+function hasNegativeProductNumbers(form) {
+  return [
+    form.quantidadeEstoque,
+    form.estoqueMinimo,
+    form.valorCompra,
+    form.valorVenda,
+    form.valorVendaPrazo
+  ].some((value) => Number(value) < 0);
+}
+
+function productSalePrice(produto, formaPagamento) {
+  if (!produto) {
+    return 0;
+  }
+
+  if (formaPagamento === "CARTAO_CREDITO") {
+    return productTermPrice(produto);
+  }
+
+  return productCashPrice(produto);
+}
+
+function productCashPrice(produto) {
+  return parseMoney(produto?.valorVendaVista ?? produto?.valorVenda);
+}
+
+function productTermPrice(produto) {
+  const termPrice = produto?.valorVendaPrazo;
+  return termPrice == null ? productCashPrice(produto) : parseMoney(termPrice);
+}
+
+function toNonNegativeInteger(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number < 0) {
+    return 0;
+  }
+
+  return Math.floor(number);
 }
 
 function validateFormEvent(event) {

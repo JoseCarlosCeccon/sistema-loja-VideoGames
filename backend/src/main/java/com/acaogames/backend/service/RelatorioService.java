@@ -252,8 +252,8 @@ public class RelatorioService {
     private MapSqlParameterSource baseParams(LocalDate inicio, LocalDate fim, String busca, PageRequest pageRequest) {
         String normalizedSearch = busca == null ? "" : busca.trim().toLowerCase();
         return new MapSqlParameterSource()
-                .addValue("inicio", inicio)
-                .addValue("fim", fim)
+                .addValue("inicio", inicio == null ? null : inicio.toString())
+                .addValue("fim", fim == null ? null : fim.toString())
                 .addValue("busca", normalizedSearch)
                 .addValue("buscaLike", "%" + normalizedSearch + "%")
                 .addValue("limit", pageRequest.getSize())

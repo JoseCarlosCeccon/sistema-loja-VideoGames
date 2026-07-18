@@ -15,5 +15,11 @@ if (-not (Test-Path (Join-Path $FrontendDir "node_modules"))) {
     npm.cmd install *>&1 | Tee-Object -FilePath $LogFile
 }
 
-Write-Host "Iniciando Vite em http://localhost:5173..." -ForegroundColor Green
-npm.cmd run dev -- --host 0.0.0.0 --port 5173 *>&1 | Tee-Object -FilePath $LogFile -Append
+$BuildIndex = Join-Path $FrontendDir "dist\index.html"
+if (-not (Test-Path $BuildIndex)) {
+    Write-Host "Build nao encontrado. Compilando o frontend uma unica vez..." -ForegroundColor Yellow
+    npm.cmd run build *>&1 | Tee-Object -FilePath $LogFile -Append
+}
+
+Write-Host "Iniciando frontend compilado em http://localhost:5173..." -ForegroundColor Green
+npm.cmd run preview -- --host 0.0.0.0 --port 5173 *>&1 | Tee-Object -FilePath $LogFile -Append

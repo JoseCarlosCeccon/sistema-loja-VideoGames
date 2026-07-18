@@ -1,63 +1,48 @@
 -- =====================================================
 -- BANCO DE DADOS: acaogames
 -- Sistema para Loja de Videogames
--- PostgreSQL
+-- SQLite
 -- =====================================================
--- Execute este script dentro do banco acaogames.
--- Nao execute CREATE DATABASE aqui.
--- Atencao: este script recria as tabelas e reinsere dados iniciais.
+-- Executado automaticamente na primeira inicializacao do sistema.
 
-DROP TABLE IF EXISTS item_venda CASCADE;
-DROP TABLE IF EXISTS item_servico CASCADE;
-DROP TABLE IF EXISTS movimentacao_estoque CASCADE;
-DROP TABLE IF EXISTS movimento_caixa CASCADE;
-DROP TABLE IF EXISTS garantia CASCADE;
-DROP TABLE IF EXISTS orcamento CASCADE;
-DROP TABLE IF EXISTS venda CASCADE;
-DROP TABLE IF EXISTS ordem_servico CASCADE;
-DROP TABLE IF EXISTS produto CASCADE;
-DROP TABLE IF EXISTS equipamento CASCADE;
-DROP TABLE IF EXISTS usuario_sistema CASCADE;
-DROP TABLE IF EXISTS cliente CASCADE;
-
-CREATE TABLE cliente (
-    id_cliente BIGSERIAL PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS cliente (
+    id_cliente INTEGER PRIMARY KEY AUTOINCREMENT,
     nome VARCHAR(120) NOT NULL,
     telefone VARCHAR(20) NOT NULL,
     cpf VARCHAR(14),
     endereco VARCHAR(200),
     email VARCHAR(120),
     observacoes TEXT,
-    ativo BOOLEAN NOT NULL DEFAULT TRUE,
-    data_cadastro TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ativo INTEGER NOT NULL DEFAULT 1,
+    data_cadastro TIMESTAMP NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%S', 'NOW', 'LOCALTIME'))
 );
 
-CREATE TABLE usuario_sistema (
-    id_usuario BIGSERIAL PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS usuario_sistema (
+    id_usuario INTEGER PRIMARY KEY AUTOINCREMENT,
     nome VARCHAR(120) NOT NULL,
     login VARCHAR(60) NOT NULL UNIQUE,
     senha VARCHAR(255) NOT NULL,
     perfil VARCHAR(30) NOT NULL,
-    ativo BOOLEAN NOT NULL DEFAULT TRUE,
-    data_cadastro TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    ativo INTEGER NOT NULL DEFAULT 1,
+    data_cadastro TIMESTAMP NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%S', 'NOW', 'LOCALTIME')),
     CONSTRAINT chk_usuario_perfil CHECK (perfil IN ('ADMINISTRADOR', 'ATENDENTE', 'TECNICO', 'FINANCEIRO'))
 );
 
-CREATE TABLE equipamento (
-    id_equipamento BIGSERIAL PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS equipamento (
+    id_equipamento INTEGER PRIMARY KEY AUTOINCREMENT,
     marca VARCHAR(50) NOT NULL,
     tipo_equipamento VARCHAR(30) NOT NULL,
     modelo VARCHAR(100) NOT NULL,
     descricao TEXT,
-    ativo BOOLEAN NOT NULL DEFAULT TRUE,
-    data_cadastro TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    ativo INTEGER NOT NULL DEFAULT 1,
+    data_cadastro TIMESTAMP NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%S', 'NOW', 'LOCALTIME')),
     CONSTRAINT chk_equipamento_marca CHECK (marca IN ('Sony', 'Microsoft', 'Nintendo')),
     CONSTRAINT chk_equipamento_tipo CHECK (tipo_equipamento IN ('Console', 'Controle')),
     CONSTRAINT uk_equipamento_modelo UNIQUE (marca, tipo_equipamento, modelo)
 );
 
-CREATE TABLE produto (
-    id_produto BIGSERIAL PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS produto (
+    id_produto INTEGER PRIMARY KEY AUTOINCREMENT,
     nome VARCHAR(120) NOT NULL,
     categoria VARCHAR(60) NOT NULL,
     descricao TEXT,
@@ -65,24 +50,28 @@ CREATE TABLE produto (
     estoque_minimo INTEGER NOT NULL DEFAULT 0,
     valor_compra NUMERIC(10,2) NOT NULL DEFAULT 0,
     valor_venda NUMERIC(10,2) NOT NULL DEFAULT 0,
-    foto BYTEA,
+    valor_venda_vista NUMERIC(10,2) NOT NULL DEFAULT 0,
+    valor_venda_prazo NUMERIC(10,2) NOT NULL DEFAULT 0,
+    foto BLOB,
     foto_nome VARCHAR(180),
     foto_tipo VARCHAR(80),
     foto_tamanho INTEGER,
-    ativo BOOLEAN NOT NULL DEFAULT TRUE,
-    data_cadastro TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    ativo INTEGER NOT NULL DEFAULT 1,
+    data_cadastro TIMESTAMP NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%S', 'NOW', 'LOCALTIME')),
     CONSTRAINT chk_produto_quantidade CHECK (quantidade_estoque >= 0),
     CONSTRAINT chk_produto_estoque_minimo CHECK (estoque_minimo >= 0),
     CONSTRAINT chk_produto_valor_compra CHECK (valor_compra >= 0),
     CONSTRAINT chk_produto_valor_venda CHECK (valor_venda >= 0),
+    CONSTRAINT chk_produto_valor_venda_vista CHECK (valor_venda_vista >= 0),
+    CONSTRAINT chk_produto_valor_venda_prazo CHECK (valor_venda_prazo >= 0),
     CONSTRAINT chk_produto_foto_tamanho CHECK (foto_tamanho IS NULL OR foto_tamanho <= 512000)
 );
 
-CREATE TABLE ordem_servico (
-    id_ordem_servico BIGSERIAL PRIMARY KEY,
-    id_cliente BIGINT NOT NULL,
-    id_equipamento BIGINT NOT NULL,
-    id_usuario BIGINT NOT NULL,
+CREATE TABLE IF NOT EXISTS ordem_servico (
+    id_ordem_servico INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_cliente INTEGER NOT NULL,
+    id_equipamento INTEGER NOT NULL,
+    id_usuario INTEGER NOT NULL,
     numero_serie VARCHAR(100),
     cor VARCHAR(50),
     data_entrada DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -93,7 +82,7 @@ CREATE TABLE ordem_servico (
     valor_servico NUMERIC(10,2),
     data_saida DATE,
     observacoes TEXT,
-    data_criacao TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    data_criacao TIMESTAMP NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%S', 'NOW', 'LOCALTIME')),
     data_atualizacao TIMESTAMP,
     CONSTRAINT fk_os_cliente FOREIGN KEY (id_cliente) REFERENCES cliente(id_cliente) ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT fk_os_equipamento FOREIGN KEY (id_equipamento) REFERENCES equipamento(id_equipamento) ON UPDATE CASCADE ON DELETE RESTRICT,
@@ -112,9 +101,9 @@ CREATE TABLE ordem_servico (
     CONSTRAINT chk_os_datas CHECK (data_saida IS NULL OR data_saida >= data_entrada)
 );
 
-CREATE TABLE orcamento (
-    id_orcamento BIGSERIAL PRIMARY KEY,
-    id_ordem_servico BIGINT NOT NULL UNIQUE,
+CREATE TABLE IF NOT EXISTS orcamento (
+    id_orcamento INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_ordem_servico INTEGER NOT NULL UNIQUE,
     descricao TEXT NOT NULL,
     valor_estimado NUMERIC(10,2) NOT NULL,
     data_orcamento DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -125,9 +114,9 @@ CREATE TABLE orcamento (
     CONSTRAINT chk_orcamento_status CHECK (status_orcamento IN ('PENDENTE', 'APROVADO', 'RECUSADO'))
 );
 
-CREATE TABLE garantia (
-    id_garantia BIGSERIAL PRIMARY KEY,
-    id_ordem_servico BIGINT NOT NULL UNIQUE,
+CREATE TABLE IF NOT EXISTS garantia (
+    id_garantia INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_ordem_servico INTEGER NOT NULL UNIQUE,
     data_inicio DATE NOT NULL,
     data_fim DATE NOT NULL,
     tempo_garantia_dias INTEGER NOT NULL,
@@ -139,10 +128,10 @@ CREATE TABLE garantia (
     CONSTRAINT chk_garantia_status CHECK (status IN ('ATIVA', 'EXPIRADA', 'CANCELADA'))
 );
 
-CREATE TABLE item_servico (
-    id_item_servico BIGSERIAL PRIMARY KEY,
-    id_ordem_servico BIGINT NOT NULL,
-    id_produto BIGINT NOT NULL,
+CREATE TABLE IF NOT EXISTS item_servico (
+    id_item_servico INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_ordem_servico INTEGER NOT NULL,
+    id_produto INTEGER NOT NULL,
     quantidade INTEGER NOT NULL,
     valor_unitario NUMERIC(10,2) NOT NULL,
     subtotal NUMERIC(10,2) NOT NULL,
@@ -153,9 +142,9 @@ CREATE TABLE item_servico (
     CONSTRAINT chk_item_servico_subtotal CHECK (subtotal >= 0)
 );
 
-CREATE TABLE venda (
-    id_venda BIGSERIAL PRIMARY KEY,
-    id_cliente BIGINT,
+CREATE TABLE IF NOT EXISTS venda (
+    id_venda INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_cliente INTEGER,
     data_venda DATE NOT NULL DEFAULT CURRENT_DATE,
     valor_total NUMERIC(10,2) NOT NULL,
     forma_pagamento VARCHAR(30) NOT NULL,
@@ -165,10 +154,10 @@ CREATE TABLE venda (
     CONSTRAINT chk_venda_forma_pagamento CHECK (forma_pagamento IN ('DINHEIRO', 'PIX', 'CARTAO_DEBITO', 'CARTAO_CREDITO'))
 );
 
-CREATE TABLE item_venda (
-    id_item_venda BIGSERIAL PRIMARY KEY,
-    id_venda BIGINT NOT NULL,
-    id_produto BIGINT NOT NULL,
+CREATE TABLE IF NOT EXISTS item_venda (
+    id_item_venda INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_venda INTEGER NOT NULL,
+    id_produto INTEGER NOT NULL,
     quantidade INTEGER NOT NULL,
     valor_unitario NUMERIC(10,2) NOT NULL,
     subtotal NUMERIC(10,2) NOT NULL,
@@ -179,13 +168,13 @@ CREATE TABLE item_venda (
     CONSTRAINT chk_item_venda_subtotal CHECK (subtotal >= 0)
 );
 
-CREATE TABLE movimentacao_estoque (
-    id_movimentacao BIGSERIAL PRIMARY KEY,
-    id_produto BIGINT NOT NULL,
-    id_usuario BIGINT NOT NULL,
+CREATE TABLE IF NOT EXISTS movimentacao_estoque (
+    id_movimentacao INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_produto INTEGER NOT NULL,
+    id_usuario INTEGER NOT NULL,
     tipo VARCHAR(20) NOT NULL,
     quantidade INTEGER NOT NULL,
-    data_movimentacao TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    data_movimentacao TIMESTAMP NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%S', 'NOW', 'LOCALTIME')),
     motivo VARCHAR(100) NOT NULL,
     observacoes TEXT,
     CONSTRAINT fk_movimentacao_produto FOREIGN KEY (id_produto) REFERENCES produto(id_produto) ON UPDATE CASCADE ON DELETE RESTRICT,
@@ -194,15 +183,15 @@ CREATE TABLE movimentacao_estoque (
     CONSTRAINT chk_movimentacao_quantidade CHECK (quantidade > 0)
 );
 
-CREATE TABLE movimento_caixa (
-    id_movimento_caixa BIGSERIAL PRIMARY KEY,
-    id_usuario BIGINT NOT NULL,
-    id_venda BIGINT UNIQUE,
-    id_ordem_servico BIGINT UNIQUE,
+CREATE TABLE IF NOT EXISTS movimento_caixa (
+    id_movimento_caixa INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_usuario INTEGER NOT NULL,
+    id_venda INTEGER UNIQUE,
+    id_ordem_servico INTEGER UNIQUE,
     tipo VARCHAR(20) NOT NULL,
     descricao TEXT NOT NULL,
     valor NUMERIC(10,2) NOT NULL,
-    data_movimento TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    data_movimento TIMESTAMP NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%S', 'NOW', 'LOCALTIME')),
     forma_pagamento VARCHAR(30),
     categoria VARCHAR(60) NOT NULL,
     CONSTRAINT fk_caixa_usuario FOREIGN KEY (id_usuario) REFERENCES usuario_sistema(id_usuario) ON UPDATE CASCADE ON DELETE RESTRICT,
@@ -215,26 +204,26 @@ CREATE TABLE movimento_caixa (
     )
 );
 
-CREATE INDEX idx_cliente_nome ON cliente(nome);
-CREATE INDEX idx_cliente_telefone ON cliente(telefone);
-CREATE INDEX idx_cliente_cpf ON cliente(cpf);
-CREATE INDEX idx_equipamento_marca ON equipamento(marca);
-CREATE INDEX idx_equipamento_tipo ON equipamento(tipo_equipamento);
-CREATE INDEX idx_equipamento_modelo ON equipamento(modelo);
-CREATE INDEX idx_os_cliente ON ordem_servico(id_cliente);
-CREATE INDEX idx_os_equipamento ON ordem_servico(id_equipamento);
-CREATE INDEX idx_os_usuario ON ordem_servico(id_usuario);
-CREATE INDEX idx_os_status ON ordem_servico(status);
-CREATE INDEX idx_os_data_entrada ON ordem_servico(data_entrada);
-CREATE INDEX idx_os_numero_serie ON ordem_servico(numero_serie);
-CREATE INDEX idx_produto_nome ON produto(nome);
-CREATE INDEX idx_produto_categoria ON produto(categoria);
-CREATE INDEX idx_venda_data ON venda(data_venda);
-CREATE INDEX idx_caixa_data ON movimento_caixa(data_movimento);
-CREATE INDEX idx_caixa_tipo ON movimento_caixa(tipo);
-CREATE INDEX idx_caixa_categoria ON movimento_caixa(categoria);
-CREATE INDEX idx_estoque_data ON movimentacao_estoque(data_movimentacao);
-CREATE INDEX idx_estoque_produto ON movimentacao_estoque(id_produto);
+CREATE INDEX IF NOT EXISTS idx_cliente_nome ON cliente(nome);
+CREATE INDEX IF NOT EXISTS idx_cliente_telefone ON cliente(telefone);
+CREATE INDEX IF NOT EXISTS idx_cliente_cpf ON cliente(cpf);
+CREATE INDEX IF NOT EXISTS idx_equipamento_marca ON equipamento(marca);
+CREATE INDEX IF NOT EXISTS idx_equipamento_tipo ON equipamento(tipo_equipamento);
+CREATE INDEX IF NOT EXISTS idx_equipamento_modelo ON equipamento(modelo);
+CREATE INDEX IF NOT EXISTS idx_os_cliente ON ordem_servico(id_cliente);
+CREATE INDEX IF NOT EXISTS idx_os_equipamento ON ordem_servico(id_equipamento);
+CREATE INDEX IF NOT EXISTS idx_os_usuario ON ordem_servico(id_usuario);
+CREATE INDEX IF NOT EXISTS idx_os_status ON ordem_servico(status);
+CREATE INDEX IF NOT EXISTS idx_os_data_entrada ON ordem_servico(data_entrada);
+CREATE INDEX IF NOT EXISTS idx_os_numero_serie ON ordem_servico(numero_serie);
+CREATE INDEX IF NOT EXISTS idx_produto_nome ON produto(nome);
+CREATE INDEX IF NOT EXISTS idx_produto_categoria ON produto(categoria);
+CREATE INDEX IF NOT EXISTS idx_venda_data ON venda(data_venda);
+CREATE INDEX IF NOT EXISTS idx_caixa_data ON movimento_caixa(data_movimento);
+CREATE INDEX IF NOT EXISTS idx_caixa_tipo ON movimento_caixa(tipo);
+CREATE INDEX IF NOT EXISTS idx_caixa_categoria ON movimento_caixa(categoria);
+CREATE INDEX IF NOT EXISTS idx_estoque_data ON movimentacao_estoque(data_movimentacao);
+CREATE INDEX IF NOT EXISTS idx_estoque_produto ON movimentacao_estoque(id_produto);
 
 INSERT INTO usuario_sistema (nome, login, senha, perfil, ativo) VALUES
 ('Administrador Geral', 'admin', '123456', 'ADMINISTRADOR', TRUE),
@@ -275,17 +264,17 @@ INSERT INTO equipamento (marca, tipo_equipamento, modelo, descricao) VALUES
 ('Nintendo', 'Controle', 'Joy-Con', 'Controle Joy-Con do Nintendo Switch'),
 ('Nintendo', 'Controle', 'Pro Controller', 'Controle Pro Controller do Nintendo Switch');
 
-INSERT INTO produto (nome, categoria, descricao, quantidade_estoque, estoque_minimo, valor_compra, valor_venda) VALUES
-('Cabo HDMI 2.0', 'Acessorio', 'Cabo HDMI para consoles', 20, 5, 15.00, 35.00),
-('Fonte PS4 Slim', 'Peca', 'Fonte compativel com PlayStation 4 Slim', 5, 2, 120.00, 220.00),
-('Pasta termica', 'Insumo', 'Pasta termica para manutencao de consoles', 15, 3, 20.00, 45.00),
-('Analogico DualShock 4', 'Peca', 'Analogico para controle PS4', 12, 4, 12.00, 35.00),
-('Botao RB Xbox Series', 'Peca', 'Botao RB para controle Xbox Series', 8, 2, 8.00, 25.00),
-('Conector HDMI PS4', 'Peca', 'Conector HDMI para placa de PS4', 6, 2, 18.00, 60.00),
-('Controle PS4 Usado', 'Produto', 'Controle PS4 usado revisado', 4, 1, 90.00, 180.00),
-('Controle Xbox Usado', 'Produto', 'Controle Xbox usado revisado', 3, 1, 100.00, 200.00),
-('Cabo USB-C', 'Acessorio', 'Cabo USB-C para controle e Nintendo Switch', 18, 5, 10.00, 30.00),
-('Carregador Nintendo Switch', 'Acessorio', 'Fonte/carregador para Nintendo Switch', 5, 2, 85.00, 160.00);
+INSERT INTO produto (nome, categoria, descricao, quantidade_estoque, estoque_minimo, valor_compra, valor_venda, valor_venda_vista, valor_venda_prazo) VALUES
+('Cabo HDMI 2.0', 'Acessorio', 'Cabo HDMI para consoles', 20, 5, 15.00, 35.00, 35.00, 40.00),
+('Fonte PS4 Slim', 'Peca', 'Fonte compativel com PlayStation 4 Slim', 5, 2, 120.00, 220.00, 220.00, 250.00),
+('Pasta termica', 'Insumo', 'Pasta termica para manutencao de consoles', 15, 3, 20.00, 45.00, 45.00, 50.00),
+('Analogico DualShock 4', 'Peca', 'Analogico para controle PS4', 12, 4, 12.00, 35.00, 35.00, 40.00),
+('Botao RB Xbox Series', 'Peca', 'Botao RB para controle Xbox Series', 8, 2, 8.00, 25.00, 25.00, 30.00),
+('Conector HDMI PS4', 'Peca', 'Conector HDMI para placa de PS4', 6, 2, 18.00, 60.00, 60.00, 70.00),
+('Controle PS4 Usado', 'Produto', 'Controle PS4 usado revisado', 4, 1, 90.00, 180.00, 180.00, 210.00),
+('Controle Xbox Usado', 'Produto', 'Controle Xbox usado revisado', 3, 1, 100.00, 200.00, 200.00, 230.00),
+('Cabo USB-C', 'Acessorio', 'Cabo USB-C para controle e Nintendo Switch', 18, 5, 10.00, 30.00, 30.00, 35.00),
+('Carregador Nintendo Switch', 'Acessorio', 'Fonte/carregador para Nintendo Switch', 5, 2, 85.00, 160.00, 160.00, 185.00);
 
 INSERT INTO ordem_servico (
     id_cliente, id_equipamento, id_usuario, numero_serie, cor, data_entrada,

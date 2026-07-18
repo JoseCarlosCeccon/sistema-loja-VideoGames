@@ -2,11 +2,12 @@ import { useState } from "react";
 import { api } from "../services/api";
 import loginLogo from "../assets/images/A-O-GAMES-1-20-2026.png";
 
-export default function LoginPage({ onAuthenticated }) {
+export default function LoginPage({ message = "", onAuthenticated }) {
   const [form, setForm] = useState({ login: "", senha: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const visibleError = error || message;
 
   function updateField(field, value) {
     setForm((current) => ({
@@ -79,9 +80,9 @@ export default function LoginPage({ onAuthenticated }) {
             Mostrar senha
           </label>
 
-          {error ? (
+          {visibleError ? (
             <div className="login-error" role="alert">
-              {error}
+              {visibleError}
             </div>
           ) : null}
 

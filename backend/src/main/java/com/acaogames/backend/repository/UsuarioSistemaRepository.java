@@ -3,8 +3,6 @@ package com.acaogames.backend.repository;
 import com.acaogames.backend.model.UsuarioSistema;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.jdbc.core.RowMapper;
@@ -50,13 +48,10 @@ public class UsuarioSistemaRepository {
                 usuario.setSenha(rs.getString("senha"));
                 usuario.setPerfil(rs.getString("perfil"));
                 usuario.setAtivo(rs.getBoolean("ativo"));
-                usuario.setDataCadastro(toLocalDateTime(rs.getTimestamp("data_cadastro")));
+                usuario.setDataCadastro(JdbcTemporalValues.getLocalDateTime(rs, "data_cadastro"));
                 return usuario;
             }
         };
     }
 
-    private LocalDateTime toLocalDateTime(Timestamp timestamp) {
-        return timestamp == null ? null : timestamp.toLocalDateTime();
-    }
 }

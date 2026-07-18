@@ -20,6 +20,8 @@ function createEmptyProductForm() {
     estoqueMinimo: 0,
     valorCompra: 0,
     valorVenda: 0,
+    valorVendaVista: 0,
+    valorVendaPrazo: 0,
     fotoFile: null,
     fotoPreviewUrl: "",
     removerFoto: false,
@@ -35,7 +37,9 @@ function productToForm(produto) {
     quantidadeEstoque: produto?.quantidadeEstoque ?? 0,
     estoqueMinimo: produto?.estoqueMinimo ?? 0,
     valorCompra: produto?.valorCompra ?? 0,
-    valorVenda: produto?.valorVenda ?? 0,
+    valorVenda: productCashPrice(produto),
+    valorVendaVista: productCashPrice(produto),
+    valorVendaPrazo: productTermPrice(produto),
     fotoFile: null,
     fotoPreviewUrl: produto?.possuiFoto ? productPhotoUrl(produto) : "",
     removerFoto: false,
@@ -51,7 +55,9 @@ function buildProductPayload(form) {
     quantidadeEstoque: toNonNegativeInteger(form.quantidadeEstoque),
     estoqueMinimo: toNonNegativeInteger(form.estoqueMinimo),
     valorCompra: parseMoney(form.valorCompra),
-    valorVenda: parseMoney(form.valorVenda),
+    valorVenda: parseMoney(form.valorVendaVista),
+    valorVendaVista: parseMoney(form.valorVendaVista),
+    valorVendaPrazo: parseMoney(form.valorVendaPrazo),
     ativo: form.ativo !== false
   };
 }
@@ -89,7 +95,7 @@ export default function EstoquePage({ produtos, onProdutosChange, onFeedback }) 
   const activeProducts = produtos.filter((produto) => produto.ativo).length;
   const lowStockProducts = produtos.filter((produto) => isLowStock(produto)).length;
   const totalStockValue = produtos.reduce((total, produto) => {
-    return total + Number(produto.quantidadeEstoque || 0) * parseMoney(produto.valorVenda);
+    return total + Number(produto.quantidadeEstoque || 0) * productCashPrice(produto);
   }, 0);
 
   useEffect(() => {
@@ -375,7 +381,8 @@ export default function EstoquePage({ produtos, onProdutosChange, onFeedback }) 
                   <th>Qtd</th>
                   <th>Minimo</th>
                   <th>Compra</th>
-                  <th>Venda</th>
+                  <th>A vista</th>
+                  <th>A prazo</th>
                   <th>Status</th>
                   <th>Acoes</th>
                 </tr>
@@ -396,7 +403,8 @@ export default function EstoquePage({ produtos, onProdutosChange, onFeedback }) 
                     <td>{produto.quantidadeEstoque}</td>
                     <td>{produto.estoqueMinimo}</td>
                     <td>{currencyFormatter.format(parseMoney(produto.valorCompra))}</td>
-                    <td>{currencyFormatter.format(parseMoney(produto.valorVenda))}</td>
+                    <td>{currencyFormatter.format(productCashPrice(produto))}</td>
+                    <td>{currencyFormatter.format(productTermPrice(produto))}</td>
                     <td>
                       <div className="stock-status-stack">
                         <span className={`status-badge status-badge--${produto.ativo ? "green" : "red"}`}>
@@ -423,7 +431,7 @@ export default function EstoquePage({ produtos, onProdutosChange, onFeedback }) 
                   </tr>
                 )) : (
                   <tr>
-                    <td colSpan="8">
+                    <td colSpan="9">
                       {search ? "Nenhum produto encontrado para a busca informada." : "Nenhum produto cadastrado ainda."}
                     </td>
                   </tr>
@@ -548,14 +556,25 @@ function ProductModal({ form, selectedProduct, saving, onClose, onSubmit, onChan
                   />
                 </label>
                 <label className="field">
-                  <span>Valor de venda</span>
+                  <span>Valor a vista</span>
                   <input
                     type="number"
                     min="0"
                     step="0.01"
                     required
-                    value={form.valorVenda}
-                    onChange={(event) => onChange("valorVenda", event.target.value)}
+                    value={form.valorVendaVista}
+                    onChange={(event) => onChange("valorVendaVista", event.target.value)}
+                  />
+                </label>
+                <label className="field">
+                  <span>Valor a prazo</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    required
+                    value={form.valorVendaPrazo}
+                    onChange={(event) => onChange("valorVendaPrazo", event.target.value)}
                   />
                 </label>
                 <label className="field field--wide">
@@ -618,8 +637,8 @@ function ProductModal({ form, selectedProduct, saving, onClose, onSubmit, onChan
 }
 
 function ProductDetailsModal({ produto, onClose, onEdit }) {
-  const margem = parseMoney(produto.valorVenda) - parseMoney(produto.valorCompra);
-  const valorTotal = Number(produto.quantidadeEstoque || 0) * parseMoney(produto.valorVenda);
+  const margem = productCashPrice(produto) - parseMoney(produto.valorCompra);
+  const valorTotal = Number(produto.quantidadeEstoque || 0) * productCashPrice(produto);
 
   return (
     <div className="modal-backdrop" role="presentation">
@@ -649,7 +668,8 @@ function ProductDetailsModal({ produto, onClose, onEdit }) {
             <DetailItem label="Quantidade atual" value={produto.quantidadeEstoque} />
             <DetailItem label="Estoque minimo" value={produto.estoqueMinimo} />
             <DetailItem label="Valor de compra" value={currencyFormatter.format(parseMoney(produto.valorCompra))} />
-            <DetailItem label="Valor de venda" value={currencyFormatter.format(parseMoney(produto.valorVenda))} />
+            <DetailItem label="Valor a vista" value={currencyFormatter.format(productCashPrice(produto))} />
+            <DetailItem label="Valor a prazo" value={currencyFormatter.format(productTermPrice(produto))} />
             <DetailItem label="Margem unitaria" value={currencyFormatter.format(margem)} />
             <DetailItem label="Valor total em estoque" value={currencyFormatter.format(valorTotal)} />
             <DetailItem label="Cadastro" value={formatDateTime(produto.dataCadastro)} />
@@ -717,8 +737,19 @@ function hasNegativeNumbers(form) {
     form.quantidadeEstoque,
     form.estoqueMinimo,
     form.valorCompra,
-    form.valorVenda
+    form.valorVendaVista,
+    form.valorVendaPrazo
   ].some((value) => Number(value) < 0);
+}
+
+function productCashPrice(produto) {
+  return parseMoney(produto?.valorVendaVista ?? produto?.valorVenda);
+}
+
+function productTermPrice(produto) {
+  const cashPrice = productCashPrice(produto);
+  const termPrice = produto?.valorVendaPrazo;
+  return termPrice == null ? cashPrice : parseMoney(termPrice);
 }
 
 function toNonNegativeInteger(value) {

@@ -3,7 +3,6 @@ package com.acaogames.backend.repository;
 import com.acaogames.backend.model.Cliente;
 import com.acaogames.backend.model.Venda;
 import java.math.BigDecimal;
-import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
@@ -78,7 +77,7 @@ public class VendaRepository {
     public BigDecimal sumByDate(LocalDate dataVenda) {
         BigDecimal total = jdbcTemplate.queryForObject(
                 "SELECT COALESCE(SUM(valor_total), 0) FROM venda WHERE data_venda = :dataVenda",
-                new MapSqlParameterSource("dataVenda", toDate(dataVenda)),
+                new MapSqlParameterSource("dataVenda", JdbcTemporalValues.toDatabaseValue(dataVenda)),
                 BigDecimal.class
         );
         return total == null ? BigDecimal.ZERO : total;
@@ -88,7 +87,7 @@ public class VendaRepository {
         Long idCliente = venda.getCliente() == null ? null : venda.getCliente().getIdCliente();
         return new MapSqlParameterSource()
                 .addValue("idCliente", idCliente)
-                .addValue("dataVenda", toDate(venda.getDataVenda()))
+                .addValue("dataVenda", JdbcTemporalValues.toDatabaseValue(venda.getDataVenda()))
                 .addValue("valorTotal", venda.getValorTotal())
                 .addValue("formaPagamento", venda.getFormaPagamento())
                 .addValue("observacoes", venda.getObservacoes());
@@ -106,7 +105,7 @@ public class VendaRepository {
                     cliente.setIdCliente(idCliente);
                     venda.setCliente(cliente);
                 }
-                venda.setDataVenda(toLocalDate(rs.getDate("data_venda")));
+                venda.setDataVenda(JdbcTemporalValues.getLocalDate(rs, "data_venda"));
                 venda.setValorTotal(rs.getBigDecimal("valor_total"));
                 venda.setFormaPagamento(rs.getString("forma_pagamento"));
                 venda.setObservacoes(rs.getString("observacoes"));
@@ -120,11 +119,4 @@ public class VendaRepository {
         return rs.wasNull() ? null : Long.valueOf(value);
     }
 
-    private Date toDate(LocalDate value) {
-        return value == null ? null : Date.valueOf(value);
-    }
-
-    private LocalDate toLocalDate(Date value) {
-        return value == null ? null : value.toLocalDate();
-    }
 }

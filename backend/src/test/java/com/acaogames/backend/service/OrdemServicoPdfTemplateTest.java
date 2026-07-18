@@ -44,9 +44,13 @@ class OrdemServicoPdfTemplateTest {
         ordemServico.setStatus("RECEBIDO");
         ordemServico.setValorServico(BigDecimal.valueOf(120));
 
-        byte[] pdf = new OrdemServicoPdfService().gerarPdf(ordemServico);
+        OrdemServicoPdfService service = new OrdemServicoPdfService();
+        byte[] pdf = service.gerarPdf(ordemServico);
+        byte[] segundoPdf = service.gerarPdf(ordemServico);
 
         assertNotNull(pdf);
         assertTrue(pdf.length > 0);
+        assertNotNull(segundoPdf);
+        assertTrue(segundoPdf.length > 0);
     }
 }

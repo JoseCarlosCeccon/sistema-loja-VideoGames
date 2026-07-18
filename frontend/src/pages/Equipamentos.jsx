@@ -152,13 +152,15 @@ export default function EquipamentosPage({
   onClientesChange,
   onEquipamentosChange,
   onOrdensChange,
-  onFeedback
+  onFeedback,
+  onOpenSaida
 }) {
   const [search, setSearch] = useState("");
   const [equipmentSearch, setEquipmentSearch] = useState("");
   const [statuses, setStatuses] = useState(fallbackStatuses);
   const [loading, setLoading] = useState(false);
   const [orderModalOpen, setOrderModalOpen] = useState(false);
+  const [orderModalMode, setOrderModalMode] = useState("create");
   const [orderDetailsOpen, setOrderDetailsOpen] = useState(false);
   const [equipmentManagerOpen, setEquipmentManagerOpen] = useState(false);
   const [equipmentFormOpen, setEquipmentFormOpen] = useState(false);
@@ -219,6 +221,7 @@ export default function EquipamentosPage({
   function openOrderCreateModal() {
     setSelectedOrder(null);
     setOrderForm(createEmptyOrderForm());
+    setOrderModalMode("create");
     setOrderModalOpen(true);
     notify(null);
   }
@@ -226,6 +229,32 @@ export default function EquipamentosPage({
   function openOrderEditModal(ordem) {
     setSelectedOrder(ordem);
     setOrderForm(orderToForm(ordem));
+    setOrderModalMode("edit");
+    setOrderDetailsOpen(false);
+    setOrderModalOpen(true);
+    notify(null);
+  }
+
+  function openOrderBudgetModal(ordem) {
+    setSelectedOrder(ordem);
+    setOrderForm({
+      ...orderToForm(ordem),
+      status: "AGUARDANDO_APROVACAO"
+    });
+    setOrderModalMode("budget");
+    setOrderDetailsOpen(false);
+    setOrderModalOpen(true);
+    notify(null);
+  }
+
+  function openOrderAuthorizationModal(ordem) {
+    setSelectedOrder(ordem);
+    setOrderForm({
+      ...orderToForm(ordem),
+      status: "APROVADO"
+    });
+    setOrderModalMode("authorization");
+    setOrderDetailsOpen(false);
     setOrderModalOpen(true);
     notify(null);
   }
@@ -267,6 +296,23 @@ export default function EquipamentosPage({
     }
 
     const payload = buildOrderPayload(orderForm);
+    if (orderModalMode === "create") {
+      payload.status = "RECEBIDO";
+      payload.dataSaida = null;
+    } else if (orderModalMode === "budget") {
+      payload.status = "AGUARDANDO_APROVACAO";
+      payload.dataSaida = selectedOrder?.dataSaida || null;
+    } else if (orderModalMode === "authorization") {
+      payload.status = "APROVADO";
+      payload.dataSaida = selectedOrder?.dataSaida || null;
+    } else {
+      if (payload.status === "ENTREGUE") {
+        notify({ type: "error", message: "Use Registrar Saida para entregar o aparelho e movimentar o caixa." });
+        return;
+      }
+      payload.dataSaida = selectedOrder?.dataSaida || null;
+    }
+
     if (!payload.idCliente || !payload.idEquipamento || !payload.problemaRelatado) {
       notify({ type: "error", message: "Informe cliente, equipamento e problema relatado para salvar a OS." });
       return;
@@ -283,9 +329,7 @@ export default function EquipamentosPage({
 
       notify({
         type: "success",
-        message: isEditing
-          ? `OS #${formatNumber(ordemSalva?.idOrdemServico || selectedOrder.idOrdemServico)} atualizada com sucesso.`
-          : `OS #${formatNumber(ordemSalva?.idOrdemServico)} criada com sucesso.`
+        message: orderSuccessMessage(orderModalMode, ordemSalva, selectedOrder)
       });
       setOrderModalOpen(false);
       await refreshData({ silent: true });
@@ -320,6 +364,16 @@ export default function EquipamentosPage({
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleSendToSaida(ordem) {
+    if (!onOpenSaida) {
+      notify({ type: "error", message: "Abra Registrar Saida na tela principal para entregar o aparelho." });
+      return;
+    }
+
+    setOrderDetailsOpen(false);
+    onOpenSaida(ordem);
   }
 
   function openEquipmentManager() {
@@ -471,7 +525,7 @@ export default function EquipamentosPage({
             Editar Equipamentos
           </button>
           <button type="button" className="primary-button management-hero__button" onClick={openOrderCreateModal}>
-            Nova OS
+            Registrar entrada
           </button>
         </div>
       </div>
@@ -541,9 +595,26 @@ export default function EquipamentosPage({
                         <button type="button" className="table-action" onClick={() => openOrderDetails(ordem)}>
                           Ver
                         </button>
-                        <button type="button" className="table-action table-action--edit" onClick={() => openOrderEditModal(ordem)}>
-                          Editar
-                        </button>
+                        {!isFinalizedOrder(ordem) ? (
+                          <>
+                            <button type="button" className="table-action table-action--edit" onClick={() => openOrderEditModal(ordem)}>
+                              Editar
+                            </button>
+                            {canRegisterBudget(ordem) ? (
+                              <button type="button" className="table-action" onClick={() => openOrderBudgetModal(ordem)}>
+                                Orcamento
+                              </button>
+                            ) : null}
+                            {canAuthorizeOrder(ordem) ? (
+                              <button type="button" className="table-action" onClick={() => openOrderAuthorizationModal(ordem)}>
+                                Autorizar
+                              </button>
+                            ) : null}
+                            <button type="button" className="table-action table-action--edit" onClick={() => handleSendToSaida(ordem)}>
+                              Saida
+                            </button>
+                          </>
+                        ) : null}
                         <button type="button" className="table-action" onClick={() => openServiceOrderPdf(ordem)}>
                           PDF
                         </button>
@@ -572,6 +643,7 @@ export default function EquipamentosPage({
           equipamentos={equipamentos}
           statuses={statuses}
           form={orderForm}
+          mode={orderModalMode}
           selectedOrder={selectedOrder}
           saving={savingOrder}
           onClose={closeOrderModal}
@@ -588,6 +660,9 @@ export default function EquipamentosPage({
             setOrderDetailsOpen(false);
             openOrderEditModal(selectedOrder);
           }}
+          onBudget={() => openOrderBudgetModal(selectedOrder)}
+          onAuthorize={() => openOrderAuthorizationModal(selectedOrder)}
+          onSendToSaida={() => handleSendToSaida(selectedOrder)}
         />
       ) : null}
 
@@ -628,17 +703,30 @@ function Panel({ title, children }) {
   );
 }
 
-function OrderModal({ clientes, equipamentos, statuses, form, selectedOrder, saving, onClose, onSubmit, onChange }) {
+function OrderModal({ clientes, equipamentos, statuses, form, mode, selectedOrder, saving, onClose, onSubmit, onChange }) {
+  const isCreate = mode === "create";
+  const isBudget = mode === "budget";
+  const isAuthorization = mode === "authorization";
   const isEditing = Boolean(selectedOrder?.idOrdemServico);
+  const title = orderModalTitle(mode, selectedOrder);
+  const subtitle = orderModalSubtitle(mode);
+  const submitLabel = orderSubmitLabel(mode, isEditing);
+  const statusOptions = statuses.filter((status) => status !== "ENTREGUE");
+  const valueLabel = isBudget
+    ? "Valor previsto"
+    : isAuthorization
+      ? "Valor autorizado"
+      : "Valor do servico";
+  const serviceLabel = isAuthorization ? "Servico autorizado" : "Servico realizado";
 
   return (
     <div className="modal-backdrop" role="presentation">
       <section className="entry-modal entry-modal--client-records" role="dialog" aria-modal="true" aria-labelledby="order-title">
         <header className="entry-modal__header">
           <div>
-            <span className="eyebrow">{isEditing ? "Editar OS" : "Nova OS"}</span>
-            <h2 id="order-title">{isEditing ? `Editar OS #${formatNumber(selectedOrder.idOrdemServico)}` : "Nova Ordem de Servico"}</h2>
-            <p>Cadastre ou atualize os dados tecnicos da manutencao.</p>
+            <span className="eyebrow">{orderModalEyebrow(mode)}</span>
+            <h2 id="order-title">{title}</h2>
+            <p>{subtitle}</p>
           </div>
           <div className="entry-modal__actions">
             <button type="button" className="modal-close" onClick={onClose} aria-label="Fechar">
@@ -651,38 +739,46 @@ function OrderModal({ clientes, equipamentos, statuses, form, selectedOrder, sav
           <div className="entry-form__grid">
             <fieldset className="form-card">
               <legend>Cliente e equipamento</legend>
-              <div className="form-grid-two">
-                <label className="field field--wide">
-                  <span>Cliente</span>
-                  <select required value={form.idCliente} onChange={(event) => onChange("idCliente", event.target.value)}>
-                    <option value="">Selecione o cliente</option>
-                    {clientes.map((cliente) => (
-                      <option key={cliente.idCliente} value={cliente.idCliente}>
-                        {cliente.nome} {cliente.telefone ? `- ${cliente.telefone}` : ""}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="field field--wide">
-                  <span>Equipamento</span>
-                  <select required value={form.idEquipamento} onChange={(event) => onChange("idEquipamento", event.target.value)}>
-                    <option value="">Selecione o equipamento</option>
-                    {equipamentos.map((equipamento) => (
-                      <option key={equipamento.idEquipamento} value={equipamento.idEquipamento}>
-                        {equipmentLabel(equipamento)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="field">
-                  <span>Numero de serie</span>
-                  <input value={form.numeroSerie} onChange={(event) => onChange("numeroSerie", event.target.value)} />
-                </label>
-                <label className="field">
-                  <span>Cor</span>
-                  <input value={form.cor} onChange={(event) => onChange("cor", event.target.value)} />
-                </label>
-              </div>
+              {isCreate || mode === "edit" ? (
+                <div className="form-grid-two">
+                  <label className="field field--wide">
+                    <span>Cliente</span>
+                    <select required value={form.idCliente} onChange={(event) => onChange("idCliente", event.target.value)}>
+                      <option value="">Selecione o cliente</option>
+                      {clientes.map((cliente) => (
+                        <option key={cliente.idCliente} value={cliente.idCliente}>
+                          {cliente.nome} {cliente.telefone ? `- ${cliente.telefone}` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="field field--wide">
+                    <span>Equipamento</span>
+                    <select required value={form.idEquipamento} onChange={(event) => onChange("idEquipamento", event.target.value)}>
+                      <option value="">Selecione o equipamento</option>
+                      {equipamentos.map((equipamento) => (
+                        <option key={equipamento.idEquipamento} value={equipamento.idEquipamento}>
+                          {equipmentLabel(equipamento)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="field">
+                    <span>Numero de serie</span>
+                    <input value={form.numeroSerie} onChange={(event) => onChange("numeroSerie", event.target.value)} />
+                  </label>
+                  <label className="field">
+                    <span>Cor</span>
+                    <input value={form.cor} onChange={(event) => onChange("cor", event.target.value)} />
+                  </label>
+                </div>
+              ) : (
+                <div className="selected-card selected-card--stacked">
+                  <strong>{selectedOrder?.cliente?.nome || "Cliente nao informado"}</strong>
+                  <span>{equipmentLabel(selectedOrder?.equipamento)}</span>
+                  <span>OS #{formatNumber(selectedOrder?.idOrdemServico)}</span>
+                </div>
+              )}
             </fieldset>
 
             <fieldset className="form-card">
@@ -690,24 +786,46 @@ function OrderModal({ clientes, equipamentos, statuses, form, selectedOrder, sav
               <div className="form-grid-two">
                 <label className="field">
                   <span>Data de entrada</span>
-                  <input type="date" required value={form.dataEntrada} onChange={(event) => onChange("dataEntrada", event.target.value)} />
+                  <input
+                    type="date"
+                    required
+                    readOnly={isBudget || isAuthorization}
+                    value={form.dataEntrada}
+                    onChange={(event) => onChange("dataEntrada", event.target.value)}
+                  />
                 </label>
-                <label className="field">
-                  <span>Status</span>
-                  <select value={form.status} onChange={(event) => onChange("status", event.target.value)}>
-                    {statuses.map((status) => (
-                      <option key={status} value={status}>{humanizeStatus(status)}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="field">
-                  <span>Valor do servico</span>
-                  <input type="number" min="0" step="0.01" value={form.valorServico} onChange={(event) => onChange("valorServico", event.target.value)} />
-                </label>
-                <label className="field">
-                  <span>Data de saida</span>
-                  <input type="date" value={form.dataSaida} onChange={(event) => onChange("dataSaida", event.target.value)} />
-                </label>
+                {isCreate ? (
+                  <div className="selected-card selected-card--stacked order-status-card">
+                    <strong>Recebido</strong>
+                    <span>Status inicial da entrada para manutencao.</span>
+                  </div>
+                ) : mode === "edit" ? (
+                  <label className="field">
+                    <span>Status</span>
+                    <select value={form.status} onChange={(event) => onChange("status", event.target.value)}>
+                      {statusOptions.map((status) => (
+                        <option key={status} value={status}>{humanizeStatus(status)}</option>
+                      ))}
+                    </select>
+                  </label>
+                ) : (
+                  <div className="selected-card selected-card--stacked order-status-card">
+                    <strong>{humanizeStatus(form.status)}</strong>
+                    <span>Essa atualizacao nao movimenta o caixa.</span>
+                  </div>
+                )}
+                {!isCreate ? (
+                  <label className="field">
+                    <span>{valueLabel}</span>
+                    <input type="number" min="0" step="0.01" value={form.valorServico} onChange={(event) => onChange("valorServico", event.target.value)} />
+                  </label>
+                ) : null}
+                {!isCreate ? (
+                  <label className="field">
+                    <span>Data da atualizacao</span>
+                    <input type="date" value={todayIsoDate()} readOnly />
+                  </label>
+                ) : null}
               </div>
             </fieldset>
 
@@ -723,7 +841,7 @@ function OrderModal({ clientes, equipamentos, statuses, form, selectedOrder, sav
                   <textarea rows="3" value={form.diagnostico} onChange={(event) => onChange("diagnostico", event.target.value)} />
                 </label>
                 <label className="field">
-                  <span>Servico realizado</span>
+                  <span>{serviceLabel}</span>
                   <textarea rows="3" value={form.servicoRealizado} onChange={(event) => onChange("servicoRealizado", event.target.value)} />
                 </label>
                 <label className="field field--wide">
@@ -739,7 +857,7 @@ function OrderModal({ clientes, equipamentos, statuses, form, selectedOrder, sav
               Cancelar
             </button>
             <button type="submit" className="primary-button" disabled={saving}>
-              {saving ? "Salvando..." : isEditing ? "Salvar alteracoes" : "Cadastrar OS"}
+              {saving ? "Salvando..." : submitLabel}
             </button>
           </footer>
         </form>
@@ -748,7 +866,9 @@ function OrderModal({ clientes, equipamentos, statuses, form, selectedOrder, sav
   );
 }
 
-function OrderDetailsModal({ ordem, onClose, onEdit }) {
+function OrderDetailsModal({ ordem, onClose, onEdit, onBudget, onAuthorize, onSendToSaida }) {
+  const finalized = isFinalizedOrder(ordem);
+
   return (
     <div className="modal-backdrop" role="presentation">
       <section className="entry-modal entry-modal--client" role="dialog" aria-modal="true" aria-labelledby="order-detail-title">
@@ -774,8 +894,11 @@ function OrderDetailsModal({ ordem, onClose, onEdit }) {
             <DetailItem label="Cor" value={ordem.cor} />
             <DetailItem label="Status" value={humanizeStatus(ordem.status)} />
             <DetailItem label="Entrada" value={formatDate(ordem.dataEntrada)} />
-            <DetailItem label="Saida" value={formatDate(ordem.dataSaida)} />
-            <DetailItem label="Valor" value={currencyFormatter.format(parseMoney(ordem.valorServico))} />
+            <DetailItem label="Atualizacao" value={formatDateTime(ordem.dataAtualizacao)} />
+            {ordem.dataSaida ? (
+              <DetailItem label="Saida" value={formatDate(ordem.dataSaida)} />
+            ) : null}
+            <DetailItem label="Valor previsto" value={currencyFormatter.format(parseMoney(ordem.valorServico))} />
             <DetailItem label="Problema relatado" value={ordem.problemaRelatado} wide />
             <DetailItem label="Diagnostico" value={ordem.diagnostico} wide />
             <DetailItem label="Servico realizado" value={ordem.servicoRealizado} wide />
@@ -786,12 +909,31 @@ function OrderDetailsModal({ ordem, onClose, onEdit }) {
             <button type="button" className="ghost-button" onClick={onClose}>
               Fechar
             </button>
+            {!finalized ? (
+              <>
+                {canRegisterBudget(ordem) ? (
+                  <button type="button" className="secondary-button" onClick={onBudget}>
+                    Registrar orçamento
+                  </button>
+                ) : null}
+                {canAuthorizeOrder(ordem) ? (
+                  <button type="button" className="secondary-button" onClick={onAuthorize}>
+                    Autorizar serviço
+                  </button>
+                ) : null}
+                <button type="button" className="gold-button" onClick={onSendToSaida}>
+                  Enviar para saída
+                </button>
+              </>
+            ) : null}
             <button type="button" className="secondary-button" onClick={() => openServiceOrderPdf(ordem)}>
               Abrir PDF
             </button>
-            <button type="button" className="primary-button" onClick={onEdit}>
-              Editar OS
-            </button>
+            {!finalized ? (
+              <button type="button" className="primary-button" onClick={onEdit}>
+                Editar dados
+              </button>
+            ) : null}
           </footer>
         </div>
       </section>
@@ -1005,6 +1147,97 @@ function equipmentInitials(equipamento) {
     .trim()
     .slice(0, 2)
     .toUpperCase();
+}
+
+function isFinalizedOrder(ordem) {
+  return ["ENTREGUE", "CANCELADO"].includes(String(ordem?.status || ""));
+}
+
+function canRegisterBudget(ordem) {
+  const status = String(ordem?.status || "");
+  return !isFinalizedOrder(ordem) && !["APROVADO", "EM_MANUTENCAO", "PRONTO"].includes(status);
+}
+
+function canAuthorizeOrder(ordem) {
+  const status = String(ordem?.status || "");
+  return !isFinalizedOrder(ordem) && !["APROVADO", "EM_MANUTENCAO", "PRONTO"].includes(status);
+}
+
+function orderModalEyebrow(mode) {
+  if (mode === "budget") {
+    return "Orcamento";
+  }
+
+  if (mode === "authorization") {
+    return "Autorizacao";
+  }
+
+  return mode === "edit" ? "Editar dados tecnicos" : "Entrada para manutencao";
+}
+
+function orderModalTitle(mode, selectedOrder) {
+  const orderNumber = selectedOrder?.idOrdemServico ? ` #${formatNumber(selectedOrder.idOrdemServico)}` : "";
+
+  if (mode === "budget") {
+    return `Registrar Orcamento${orderNumber}`;
+  }
+
+  if (mode === "authorization") {
+    return `Servico Autorizado${orderNumber}`;
+  }
+
+  if (mode === "edit") {
+    return `Editar OS${orderNumber}`;
+  }
+
+  return "Registrar Entrada";
+}
+
+function orderModalSubtitle(mode) {
+  if (mode === "budget") {
+    return "Salve o diagnostico e o valor previsto sem movimentar o caixa.";
+  }
+
+  if (mode === "authorization") {
+    return "Marque a autorizacao do cliente e confirme o valor tecnico sem lancar pagamento.";
+  }
+
+  if (mode === "edit") {
+    return "Atualize dados tecnicos e status intermediarios da manutencao.";
+  }
+
+  return "Cadastre o aparelho recebido e abra a ordem de servico.";
+}
+
+function orderSubmitLabel(mode, isEditing) {
+  if (mode === "budget") {
+    return "Salvar orcamento";
+  }
+
+  if (mode === "authorization") {
+    return "Salvar autorizacao";
+  }
+
+  return isEditing ? "Salvar alteracoes" : "Registrar entrada";
+}
+
+function orderSuccessMessage(mode, ordemSalva, selectedOrder) {
+  const idOrdemServico = ordemSalva?.idOrdemServico || selectedOrder?.idOrdemServico;
+  const number = formatNumber(idOrdemServico);
+
+  if (mode === "budget") {
+    return `Orcamento registrado na OS #${number}. O caixa nao foi alterado.`;
+  }
+
+  if (mode === "authorization") {
+    return `Autorizacao registrada na OS #${number}. O caixa nao foi alterado.`;
+  }
+
+  if (mode === "edit") {
+    return `OS #${number} atualizada com sucesso.`;
+  }
+
+  return `Entrada registrada. OS #${number} criada com sucesso.`;
 }
 
 function statusTone(status) {

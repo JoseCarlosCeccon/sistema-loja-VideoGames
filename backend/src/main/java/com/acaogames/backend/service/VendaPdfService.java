@@ -30,10 +30,16 @@ import org.springframework.stereotype.Service;
 public class VendaPdfService {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-    private static final NumberFormat CURRENCY_FORMATTER = NumberFormat.getCurrencyInstance(new Locale("pt", "BR"));
+    private static final ThreadLocal<NumberFormat> CURRENCY_FORMATTER = new ThreadLocal<NumberFormat>() {
+        @Override
+        protected NumberFormat initialValue() {
+            return NumberFormat.getCurrencyInstance(new Locale("pt", "BR"));
+        }
+    };
 
     private final ProdutoRepository produtoRepository;
     private final ClienteRepository clienteRepository;
+    private volatile JasperReport compiledReport;
 
     public VendaPdfService(ProdutoRepository produtoRepository, ClienteRepository clienteRepository) {
         this.produtoRepository = produtoRepository;
@@ -41,8 +47,8 @@ public class VendaPdfService {
     }
 
     public byte[] gerarPdf(Venda venda) {
-        try (InputStream template = new ClassPathResource("reports/comprovante-venda.jrxml").getInputStream()) {
-            JasperReport report = JasperCompileManager.compileReport(template);
+        try {
+            JasperReport report = compiledReport();
             JasperPrint print = JasperFillManager.fillReport(
                     report,
                     parametros(venda),
@@ -52,6 +58,22 @@ public class VendaPdfService {
         } catch (Exception exception) {
             throw new IllegalStateException("Nao foi possivel gerar o PDF do comprovante de venda.", exception);
         }
+    }
+
+    private JasperReport compiledReport() throws Exception {
+        JasperReport report = compiledReport;
+        if (report == null) {
+            synchronized (this) {
+                report = compiledReport;
+                if (report == null) {
+                    try (InputStream template = new ClassPathResource("reports/comprovante-venda.jrxml").getInputStream()) {
+                        report = JasperCompileManager.compileReport(template);
+                        compiledReport = report;
+                    }
+                }
+            }
+        }
+        return report;
     }
 
     private Map<String, Object> parametros(Venda venda) throws JRException {
@@ -111,7 +133,7 @@ public class VendaPdfService {
     }
 
     private String formatCurrency(BigDecimal value) {
-        return value == null ? "Nao informado" : CURRENCY_FORMATTER.format(value);
+        return value == null ? "Nao informado" : CURRENCY_FORMATTER.get().format(value);
     }
 
     private String value(String value) {

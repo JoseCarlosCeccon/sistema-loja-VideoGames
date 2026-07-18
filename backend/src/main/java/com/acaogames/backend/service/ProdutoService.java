@@ -98,7 +98,16 @@ public class ProdutoService {
         produto.setQuantidadeEstoque(request.getQuantidadeEstoque() == null ? 0 : request.getQuantidadeEstoque().intValue());
         produto.setEstoqueMinimo(request.getEstoqueMinimo() == null ? 0 : request.getEstoqueMinimo().intValue());
         produto.setValorCompra(request.getValorCompra() == null ? BigDecimal.ZERO : request.getValorCompra());
-        produto.setValorVenda(request.getValorVenda() == null ? BigDecimal.ZERO : request.getValorVenda());
+        BigDecimal valorVista = request.getValorVendaVista() != null
+                ? request.getValorVendaVista()
+                : request.getValorVenda();
+        if (valorVista == null) {
+            valorVista = BigDecimal.ZERO;
+        }
+        BigDecimal valorPrazo = request.getValorVendaPrazo() == null ? valorVista : request.getValorVendaPrazo();
+        produto.setValorVenda(valorVista);
+        produto.setValorVendaVista(valorVista);
+        produto.setValorVendaPrazo(valorPrazo);
         produto.setAtivo(request.getAtivo() == null ? true : request.getAtivo().booleanValue());
     }
 

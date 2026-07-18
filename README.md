@@ -12,11 +12,15 @@ scripts/     Atalhos PowerShell para iniciar backend e frontend
 
 ## Banco de dados
 
-- Banco esperado: `acaogames`
-- SGBD: PostgreSQL
-- Script oficial: `backend/src/main/resources/schema.sql`
-- O script recria as tabelas com `DROP TABLE` e insere dados iniciais. Execute apenas dentro do banco `acaogames`.
-- A inicializacao automatica do Spring esta desativada em `application.yml` com `spring.sql.init.mode: never`.
+- SGBD: SQLite, embarcado no backend
+- Arquivo local: `data/acaogames.db`
+- Schema: `backend/src/main/resources/schema.sql`
+- A estrutura e os dados iniciais sao criados automaticamente na primeira execucao.
+- Nao e necessario instalar PostgreSQL, pgAdmin ou qualquer servidor de banco.
+
+Para fazer backup, feche o sistema e copie o arquivo `data/acaogames.db`. Os arquivos auxiliares
+`acaogames.db-wal` e `acaogames.db-shm`, quando existirem, tambem devem ser copiados se o sistema
+nao puder ser encerrado antes do backup.
 
 O schema inclui:
 
@@ -32,7 +36,7 @@ O schema inclui:
 
 ## Backend
 
-- Stack: Java 8 + Spring Boot 2.7 + PostgreSQL
+- Stack: Java 8 + Spring Boot 2.7 + SQLite
 - Porta padrao: `8080`
 - Maven Wrapper incluido: use `backend/mvnw.cmd` no Windows ou `backend/mvnw` em Unix/macOS.
 
@@ -43,12 +47,13 @@ Use um JDK, nao apenas JRE. No Windows, o wrapper tenta usar `C:\Program Files\J
 ### Variaveis
 
 ```text
-SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/acaogames
-SPRING_DATASOURCE_USERNAME=postgres
-SPRING_DATASOURCE_PASSWORD=1234
+SPRING_DATASOURCE_URL=jdbc:sqlite:../data/acaogames.db?busy_timeout=5000&foreign_keys=on&journal_mode=WAL
 APP_CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 APP_DEFAULT_USER_ID=1
 ```
+
+`SPRING_DATASOURCE_URL` e opcional. Sem essa variavel, o sistema usa automaticamente
+`data/acaogames.db` na raiz do projeto.
 
 ### Como rodar
 
@@ -62,6 +67,9 @@ Ou use:
 ```powershell
 .\scripts\start-backend.ps1
 ```
+
+O atalho usa primeiro o JAR pronto, que consome menos recursos na inicializacao. Para gerar ou
+atualizar esse arquivo depois de alterar o backend, execute `backend\mvnw.cmd package`.
 
 ### Autenticacao
 
@@ -115,14 +123,15 @@ size=20
 
 - Stack: React 18 + Vite
 - Porta padrao: `5173`
-- Proxy de desenvolvimento: `/api` para `http://localhost:8080`
+- Proxy local: `/api` para `http://localhost:8080`
 
 ### Como rodar
 
 ```powershell
 cd frontend
 npm install
-npm run dev
+npm run build
+npm run preview
 ```
 
 Ou use:
@@ -130,6 +139,8 @@ Ou use:
 ```powershell
 .\scripts\start-frontend.ps1
 ```
+
+O script inicia o build compilado, reduzindo o trabalho do navegador e do Node no PC da loja. Se a pasta `dist` ainda nao existir, o build e criado automaticamente uma unica vez.
 
 ## Validacao
 

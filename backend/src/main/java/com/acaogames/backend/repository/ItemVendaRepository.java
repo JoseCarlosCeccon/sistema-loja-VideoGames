@@ -5,6 +5,8 @@ import com.acaogames.backend.model.Produto;
 import com.acaogames.backend.model.Venda;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.jdbc.core.RowMapper;
@@ -16,6 +18,8 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public class ItemVendaRepository {
+
+    private static final int MAX_BATCH_SIZE = 900;
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
 
@@ -33,6 +37,23 @@ public class ItemVendaRepository {
                 new MapSqlParameterSource("idVenda", idVenda),
                 rowMapper()
         );
+    }
+
+    public List<ItemVenda> findByVendaIds(List<Long> idsVenda) {
+        if (idsVenda == null || idsVenda.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<ItemVenda> itens = new ArrayList<ItemVenda>();
+        for (int inicio = 0; inicio < idsVenda.size(); inicio += MAX_BATCH_SIZE) {
+            int fim = Math.min(inicio + MAX_BATCH_SIZE, idsVenda.size());
+            itens.addAll(jdbcTemplate.query(
+                    "SELECT * FROM item_venda WHERE id_venda IN (:idsVenda) ORDER BY id_venda, id_item_venda",
+                    new MapSqlParameterSource("idsVenda", idsVenda.subList(inicio, fim)),
+                    rowMapper()
+            ));
+        }
+        return itens;
     }
 
     public Optional<ItemVenda> findById(Long idItemVenda) {

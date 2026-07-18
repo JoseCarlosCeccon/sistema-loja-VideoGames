@@ -25,16 +25,39 @@ import org.springframework.stereotype.Service;
 public class OrdemServicoPdfService {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-    private static final NumberFormat CURRENCY_FORMATTER = NumberFormat.getCurrencyInstance(new Locale("pt", "BR"));
+    private static final ThreadLocal<NumberFormat> CURRENCY_FORMATTER = new ThreadLocal<NumberFormat>() {
+        @Override
+        protected NumberFormat initialValue() {
+            return NumberFormat.getCurrencyInstance(new Locale("pt", "BR"));
+        }
+    };
+
+    private volatile JasperReport compiledReport;
 
     public byte[] gerarPdf(OrdemServico ordemServico) {
-        try (InputStream template = new ClassPathResource("reports/ordem-servico.jrxml").getInputStream()) {
-            JasperReport report = JasperCompileManager.compileReport(template);
+        try {
+            JasperReport report = compiledReport();
             JasperPrint print = JasperFillManager.fillReport(report, parametros(ordemServico), new JREmptyDataSource(1));
             return JasperExportManager.exportReportToPdf(print);
         } catch (Exception exception) {
             throw new IllegalStateException("Nao foi possivel gerar o PDF da ordem de servico.", exception);
         }
+    }
+
+    private JasperReport compiledReport() throws Exception {
+        JasperReport report = compiledReport;
+        if (report == null) {
+            synchronized (this) {
+                report = compiledReport;
+                if (report == null) {
+                    try (InputStream template = new ClassPathResource("reports/ordem-servico.jrxml").getInputStream()) {
+                        report = JasperCompileManager.compileReport(template);
+                        compiledReport = report;
+                    }
+                }
+            }
+        }
+        return report;
     }
 
     private Map<String, Object> parametros(OrdemServico ordemServico) throws JRException {
@@ -87,7 +110,7 @@ public class OrdemServicoPdfService {
     }
 
     private String formatCurrency(BigDecimal value) {
-        return value == null ? "Nao informado" : CURRENCY_FORMATTER.format(value);
+        return value == null ? "Nao informado" : CURRENCY_FORMATTER.get().format(value);
     }
 
     private String value(String value) {

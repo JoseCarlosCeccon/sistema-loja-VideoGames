@@ -13,6 +13,8 @@ public class Produto {
     private int estoqueMinimo;
     private BigDecimal valorCompra;
     private BigDecimal valorVenda;
+    private BigDecimal valorVendaVista;
+    private BigDecimal valorVendaPrazo;
     private boolean possuiFoto;
     private String fotoNome;
     private String fotoTipo;
@@ -82,6 +84,22 @@ public class Produto {
 
     public void setValorVenda(BigDecimal valorVenda) {
         this.valorVenda = valorVenda;
+    }
+
+    public BigDecimal getValorVendaVista() {
+        return valorVendaVista;
+    }
+
+    public void setValorVendaVista(BigDecimal valorVendaVista) {
+        this.valorVendaVista = valorVendaVista;
+    }
+
+    public BigDecimal getValorVendaPrazo() {
+        return valorVendaPrazo;
+    }
+
+    public void setValorVendaPrazo(BigDecimal valorVendaPrazo) {
+        this.valorVendaPrazo = valorVendaPrazo;
     }
 
     public boolean isPossuiFoto() {
