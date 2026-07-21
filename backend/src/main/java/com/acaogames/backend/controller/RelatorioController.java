@@ -1,0 +1,76 @@
+package com.acaogames.backend.controller;
+
+import com.acaogames.backend.dto.RelatorioResponse;
+import com.acaogames.backend.service.RelatorioService;
+import java.time.LocalDate;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/relatorios")
+public class RelatorioController {
+
+    private final RelatorioService relatorioService;
+
+    public RelatorioController(RelatorioService relatorioService) {
+        this.relatorioService = relatorioService;
+    }
+
+    @GetMapping("/caixa")
+    public RelatorioResponse caixa(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fim,
+            @RequestParam(defaultValue = "") String busca,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return relatorioService.caixa(inicio, fim, busca, page, size);
+    }
+
+    @GetMapping("/vendas")
+    public RelatorioResponse vendas(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fim,
+            @RequestParam(defaultValue = "") String busca,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return relatorioService.vendas(inicio, fim, busca, page, size);
+    }
+
+    @GetMapping("/ordens")
+    public RelatorioResponse ordens(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fim,
+            @RequestParam(defaultValue = "") String busca,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return relatorioService.ordens(inicio, fim, busca, page, size);
+    }
+
+    @GetMapping("/estoque")
+    public RelatorioResponse estoque(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fim,
+            @RequestParam(defaultValue = "") String busca,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return relatorioService.estoque(inicio, fim, busca, page, size);
+    }
+
+    @GetMapping("/clientes")
+    public RelatorioResponse clientes(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fim,
+            @RequestParam(defaultValue = "") String busca,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return relatorioService.clientes(inicio, fim, busca, page, size);
+    }
+}
