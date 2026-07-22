@@ -75,6 +75,12 @@ const formasPagamento = [
   { value: "CARTAO_DEBITO", label: "Cartao debito" },
   { value: "CARTAO_CREDITO", label: "Cartao credito" }
 ];
+const prazosGarantia = [
+  { value: "0", label: "Sem garantia" },
+  { value: "30", label: "30 dias de garantia" },
+  { value: "90", label: "90 dias de garantia" },
+  { value: "365", label: "1 ano de garantia" }
+];
 const categoriasProduto = ["Produto", "Acessorio", "Peca", "Insumo", "Servico"];
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
@@ -667,6 +673,7 @@ function App() {
         servicoRealizado: optionalText(saidaForm.servicoRealizado),
         valorServico,
         formaPagamento: valorServico > 0 ? saidaForm.formaPagamento : null,
+        garantiaDias: Number(saidaForm.garantiaDias),
         observacoes: optionalText(saidaForm.observacoes)
       });
 
@@ -704,6 +711,7 @@ function App() {
         idCliente: vendaForm.idCliente ? Number(vendaForm.idCliente) : null,
         dataVenda: vendaForm.dataVenda,
         formaPagamento: vendaForm.formaPagamento,
+        garantiaDias: Number(vendaForm.garantiaDias),
         observacoes: optionalText(vendaForm.observacoes),
         itens: vendaForm.itens.map((item) => ({
           idProduto: Number(item.idProduto),
@@ -1335,11 +1343,19 @@ function SaidaModal({ ordens, form, saving, onClose, onSubmit, onChange }) {
                   <span>Valor do servico</span>
                   <input type="number" min="0" step="0.01" value={form.valorServico} onChange={(event) => onChange("valorServico", event.target.value)} />
                 </label>
-                <label className="field field--wide">
+                <label className="field">
                   <span>Forma de pagamento</span>
                   <select required={valorServico > 0} value={form.formaPagamento} onChange={(event) => onChange("formaPagamento", event.target.value)}>
                     {formasPagamento.map((forma) => (
                       <option key={forma.value} value={forma.value}>{forma.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field">
+                  <span>Garantia</span>
+                  <select required value={form.garantiaDias} onChange={(event) => onChange("garantiaDias", event.target.value)}>
+                    {prazosGarantia.map((prazo) => (
+                      <option key={prazo.value} value={prazo.value}>{prazo.label}</option>
                     ))}
                   </select>
                 </label>
@@ -1452,6 +1468,14 @@ function VendaModal({
                       <option key={cliente.idCliente} value={cliente.idCliente}>
                         {cliente.nome} {cliente.telefone ? `- ${cliente.telefone}` : ""}
                       </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field field--wide">
+                  <span>Garantia</span>
+                  <select required value={form.garantiaDias} onChange={(event) => onChange("garantiaDias", event.target.value)}>
+                    {prazosGarantia.map((prazo) => (
+                      <option key={prazo.value} value={prazo.value}>{prazo.label}</option>
                     ))}
                   </select>
                 </label>
@@ -1739,6 +1763,7 @@ function createEmptySaidaForm() {
     dataSaida: todayIsoDate(),
     valorServico: "",
     formaPagamento: "PIX",
+    garantiaDias: "0",
     diagnostico: "",
     servicoRealizado: "",
     observacoes: ""
@@ -1758,6 +1783,7 @@ function createEmptyVendaForm() {
     idCliente: "",
     dataVenda: todayIsoDate(),
     formaPagamento: "PIX",
+    garantiaDias: "0",
     observacoes: "",
     itens: [createVendaItem()]
   };

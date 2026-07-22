@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS ordem_servico (
     servico_realizado TEXT,
     valor_servico NUMERIC(10,2),
     data_saida DATE,
+    garantia_dias INTEGER NOT NULL DEFAULT 0,
     observacoes TEXT,
     data_criacao TIMESTAMP NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%S', 'NOW', 'LOCALTIME')),
     data_atualizacao TIMESTAMP,
@@ -98,7 +99,8 @@ CREATE TABLE IF NOT EXISTS ordem_servico (
         'CANCELADO'
     )),
     CONSTRAINT chk_os_valor_servico CHECK (valor_servico IS NULL OR valor_servico >= 0),
-    CONSTRAINT chk_os_datas CHECK (data_saida IS NULL OR data_saida >= data_entrada)
+    CONSTRAINT chk_os_datas CHECK (data_saida IS NULL OR data_saida >= data_entrada),
+    CONSTRAINT chk_os_garantia CHECK (garantia_dias IN (0, 30, 90, 365))
 );
 
 CREATE TABLE IF NOT EXISTS orcamento (
@@ -148,10 +150,12 @@ CREATE TABLE IF NOT EXISTS venda (
     data_venda DATE NOT NULL DEFAULT CURRENT_DATE,
     valor_total NUMERIC(10,2) NOT NULL,
     forma_pagamento VARCHAR(30) NOT NULL,
+    garantia_dias INTEGER NOT NULL DEFAULT 0,
     observacoes TEXT,
     CONSTRAINT fk_venda_cliente FOREIGN KEY (id_cliente) REFERENCES cliente(id_cliente) ON UPDATE CASCADE ON DELETE SET NULL,
     CONSTRAINT chk_venda_valor CHECK (valor_total >= 0),
-    CONSTRAINT chk_venda_forma_pagamento CHECK (forma_pagamento IN ('DINHEIRO', 'PIX', 'CARTAO_DEBITO', 'CARTAO_CREDITO'))
+    CONSTRAINT chk_venda_forma_pagamento CHECK (forma_pagamento IN ('DINHEIRO', 'PIX', 'CARTAO_DEBITO', 'CARTAO_CREDITO')),
+    CONSTRAINT chk_venda_garantia CHECK (garantia_dias IN (0, 30, 90, 365))
 );
 
 CREATE TABLE IF NOT EXISTS item_venda (
@@ -279,13 +283,13 @@ INSERT INTO produto (nome, categoria, descricao, quantidade_estoque, estoque_min
 INSERT INTO ordem_servico (
     id_cliente, id_equipamento, id_usuario, numero_serie, cor, data_entrada,
     problema_relatado, status, diagnostico, servico_realizado, valor_servico,
-    data_saida, observacoes
+    data_saida, garantia_dias, observacoes
 ) VALUES
-(1, 3, 2, 'PS4SLIM-ABC123', 'Preto', '2026-05-01', 'Console liga, mas nao aparece imagem na TV.', 'ENTREGUE', 'Conector HDMI danificado.', 'Troca do conector HDMI e limpeza interna.', 250.00, '2026-05-04', 'Cliente retirou e testou na loja.'),
-(2, 5, 2, 'PS5-XYZ987', 'Branco', '2026-05-02', 'PS5 esquenta muito e desliga.', 'PRONTO', 'Acumulo de poeira e pasta termica ressecada.', 'Limpeza interna e troca de pasta termica.', 180.00, NULL, 'Aguardando retirada.'),
-(3, 11, 2, 'XONE-S-456DEF', 'Branco', '2026-05-03', 'Xbox desliga sozinho apos alguns minutos.', 'EM_MANUTENCAO', 'Fonte com instabilidade.', NULL, NULL, NULL, 'Tecnico aguardando peca.'),
-(4, 20, 2, 'NSW-789GHI', 'Cinza', '2026-05-05', 'Nintendo Switch nao carrega.', 'AGUARDANDO_APROVACAO', 'Possivel defeito no conector de carga.', NULL, NULL, NULL, 'Orcamento enviado ao cliente.'),
-(5, 7, 2, 'DS4-111AAA', 'Preto', '2026-05-06', 'Controle com analogico puxando para esquerda.', 'ENTREGUE', 'Drift no analogico esquerdo.', 'Troca do analogico esquerdo.', 90.00, '2026-05-07', 'Garantia de 30 dias.');
+(1, 3, 2, 'PS4SLIM-ABC123', 'Preto', '2026-05-01', 'Console liga, mas nao aparece imagem na TV.', 'ENTREGUE', 'Conector HDMI danificado.', 'Troca do conector HDMI e limpeza interna.', 250.00, '2026-05-04', 90, 'Cliente retirou e testou na loja.'),
+(2, 5, 2, 'PS5-XYZ987', 'Branco', '2026-05-02', 'PS5 esquenta muito e desliga.', 'PRONTO', 'Acumulo de poeira e pasta termica ressecada.', 'Limpeza interna e troca de pasta termica.', 180.00, NULL, 0, 'Aguardando retirada.'),
+(3, 11, 2, 'XONE-S-456DEF', 'Branco', '2026-05-03', 'Xbox desliga sozinho apos alguns minutos.', 'EM_MANUTENCAO', 'Fonte com instabilidade.', NULL, NULL, NULL, 0, 'Tecnico aguardando peca.'),
+(4, 20, 2, 'NSW-789GHI', 'Cinza', '2026-05-05', 'Nintendo Switch nao carrega.', 'AGUARDANDO_APROVACAO', 'Possivel defeito no conector de carga.', NULL, NULL, NULL, 0, 'Orcamento enviado ao cliente.'),
+(5, 7, 2, 'DS4-111AAA', 'Preto', '2026-05-06', 'Controle com analogico puxando para esquerda.', 'ENTREGUE', 'Drift no analogico esquerdo.', 'Troca do analogico esquerdo.', 90.00, '2026-05-07', 30, 'Garantia de 30 dias.');
 
 INSERT INTO orcamento (id_ordem_servico, descricao, valor_estimado, data_orcamento, status_orcamento, observacoes) VALUES
 (1, 'Troca do conector HDMI e limpeza interna.', 250.00, '2026-05-02', 'APROVADO', 'Cliente aprovou via WhatsApp.'),

@@ -98,6 +98,7 @@ public class OrdemServicoService {
         ordemServico.setDiagnostico(request.getDiagnostico());
         ordemServico.setServicoRealizado(request.getServicoRealizado());
         ordemServico.setValorServico(valorServico);
+        ordemServico.setGarantiaDias(GarantiaPrazo.validar(request.getGarantiaDias()));
         ordemServico.setObservacoes(juntarObservacoesSaida(ordemServico.getObservacoes(), request.getObservacoes()));
 
         OrdemServico atualizada = ordemServicoRepository.update(ordemServico);

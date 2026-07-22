@@ -19,6 +19,7 @@ public class VendaRequest {
     private String formaPagamento;
 
     private String observacoes;
+    private Integer garantiaDias;
 
     @Valid
     @NotEmpty(message = "A venda precisa ter ao menos um item.")
@@ -70,6 +71,14 @@ public class VendaRequest {
 
     public void setObservacoes(String observacoes) {
         this.observacoes = observacoes;
+    }
+
+    public Integer getGarantiaDias() {
+        return garantiaDias;
+    }
+
+    public void setGarantiaDias(Integer garantiaDias) {
+        this.garantiaDias = garantiaDias;
     }
 
     public List<ItemVendaRequest> getItens() {

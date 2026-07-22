@@ -12,6 +12,7 @@ public class Venda {
     private LocalDate dataVenda;
     private BigDecimal valorTotal;
     private String formaPagamento;
+    private Integer garantiaDias;
     private String observacoes;
     private List<ItemVenda> itens = new ArrayList<ItemVenda>();
 
@@ -53,6 +54,14 @@ public class Venda {
 
     public void setFormaPagamento(String formaPagamento) {
         this.formaPagamento = formaPagamento;
+    }
+
+    public Integer getGarantiaDias() {
+        return garantiaDias;
+    }
+
+    public void setGarantiaDias(Integer garantiaDias) {
+        this.garantiaDias = garantiaDias;
     }
 
     public String getObservacoes() {

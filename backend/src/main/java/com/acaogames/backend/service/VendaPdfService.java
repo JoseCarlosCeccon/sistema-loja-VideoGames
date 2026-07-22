@@ -86,6 +86,7 @@ public class VendaPdfService {
         params.put("CLIENTE_TELEFONE", cliente == null ? "Nao informado" : value(cliente.getTelefone()));
         params.put("FORMA_PAGAMENTO", formaPagamento(venda.getFormaPagamento()));
         params.put("VALOR_TOTAL", formatCurrency(venda.getValorTotal()));
+        params.put("GARANTIA", GarantiaPrazo.descricao(venda.getGarantiaDias()));
         params.put("OBSERVACOES", value(venda.getObservacoes()));
         return params;
     }

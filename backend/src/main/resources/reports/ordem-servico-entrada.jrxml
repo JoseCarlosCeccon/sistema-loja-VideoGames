@@ -2,7 +2,7 @@
 <jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
               xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
-              name="ordem_servico"
+              name="ordem_servico_entrada"
               pageWidth="595"
               pageHeight="842"
               columnWidth="515"
@@ -30,9 +30,6 @@
     <parameter name="DATA_ENTRADA" class="java.lang.String"/>
     <parameter name="DATA_SAIDA" class="java.lang.String"/>
     <parameter name="PROBLEMA_RELATADO" class="java.lang.String"/>
-    <parameter name="DIAGNOSTICO" class="java.lang.String"/>
-    <parameter name="SERVICO_REALIZADO" class="java.lang.String"/>
-    <parameter name="VALOR_SERVICO" class="java.lang.String"/>
     <parameter name="OBSERVACOES" class="java.lang.String"/>
 
     <detail>
@@ -46,11 +43,11 @@
                 <reportElement x="0" y="41" width="515" height="2" backcolor="#11A8C7"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
-            <staticText>
-                <reportElement x="12" y="3" width="180" height="25" forecolor="#FFFFFF"/>
-                <textElement><font fontName="SansSerif" size="20" isBold="true" isItalic="true"/></textElement>
-                <text><![CDATA[Ação Games]]></text>
-            </staticText>
+            <textField>
+                <reportElement x="12" y="2" width="180" height="30" forecolor="#FFFFFF"/>
+                <textElement><font fontName="SansSerif" size="18" isBold="true"/></textElement>
+                <textFieldExpression><![CDATA["Ação Games"]]></textFieldExpression>
+            </textField>
             <staticText>
                 <reportElement x="13" y="27" width="150" height="11" forecolor="#D9E1EA"/>
                 <textElement><font fontName="SansSerif" size="7"/></textElement>
@@ -82,7 +79,7 @@
                 <staticText><reportElement style="label" x="8" y="5" width="100" height="10"/><text><![CDATA[EQUIPAMENTO]]></text></staticText>
                 <textField textAdjust="ScaleFont">
                     <reportElement style="value" x="8" y="16" width="236" height="37"/>
-                    <textFieldExpression><![CDATA["Modelo: " + $P{EQUIPAMENTO} + "\nSérie: " + $P{NUMERO_SERIE} + " | Cor: " + $P{COR} + "\nStatus: " + $P{STATUS} + "\nEntrada: " + $P{DATA_ENTRADA} + " | Saída: " + $P{DATA_SAIDA}]]></textFieldExpression>
+                    <textFieldExpression><![CDATA["Modelo: " + $P{EQUIPAMENTO} + "\nSérie: " + $P{NUMERO_SERIE} + " | Cor: " + $P{COR} + "\nStatus: " + $P{STATUS} + "\nEntrada: " + $P{DATA_ENTRADA}]]></textFieldExpression>
                 </textField>
             </frame>
             <frame>
@@ -92,33 +89,15 @@
                 <textField textAdjust="ScaleFont"><reportElement style="value" x="8" y="16" width="499" height="19"/><textFieldExpression><![CDATA[$P{PROBLEMA_RELATADO}]]></textFieldExpression></textField>
             </frame>
             <frame>
-                <reportElement x="0" y="162" width="252" height="47"/>
-                <box><pen lineWidth="0.5" lineColor="#D6DDE5"/></box>
-                <staticText><reportElement style="label" x="8" y="5" width="100" height="10"/><text><![CDATA[DIAGNÓSTICO]]></text></staticText>
-                <textField textAdjust="ScaleFont"><reportElement style="value" x="8" y="16" width="236" height="26"/><textFieldExpression><![CDATA[$P{DIAGNOSTICO}]]></textFieldExpression></textField>
-            </frame>
-            <frame>
-                <reportElement x="263" y="162" width="252" height="47"/>
-                <box><pen lineWidth="0.5" lineColor="#D6DDE5"/></box>
-                <staticText><reportElement style="label" x="8" y="5" width="130" height="10"/><text><![CDATA[SERVIÇO REALIZADO]]></text></staticText>
-                <textField textAdjust="ScaleFont"><reportElement style="value" x="8" y="16" width="236" height="26"/><textFieldExpression><![CDATA[$P{SERVICO_REALIZADO}]]></textFieldExpression></textField>
-            </frame>
-            <frame>
-                <reportElement x="0" y="216" width="370" height="42"/>
+                <reportElement x="0" y="162" width="515" height="96"/>
                 <box><pen lineWidth="0.5" lineColor="#D6DDE5"/></box>
                 <staticText><reportElement style="label" x="8" y="5" width="100" height="10"/><text><![CDATA[OBSERVAÇÕES]]></text></staticText>
-                <textField textAdjust="ScaleFont"><reportElement style="value" x="8" y="16" width="354" height="21"/><textFieldExpression><![CDATA[$P{OBSERVACOES}]]></textFieldExpression></textField>
-            </frame>
-            <frame>
-                <reportElement x="377" y="216" width="138" height="42" backcolor="#F5F8FA"/>
-                <box><pen lineWidth="0.5" lineColor="#D6DDE5"/></box>
-                <staticText><reportElement style="label" x="8" y="5" width="120" height="10"/><text><![CDATA[VALOR DO SERVIÇO]]></text></staticText>
-                <textField><reportElement x="8" y="17" width="122" height="17" forecolor="#101820"/><textElement><font fontName="SansSerif" size="10" isBold="true"/></textElement><textFieldExpression><![CDATA[$P{VALOR_SERVICO}]]></textFieldExpression></textField>
+                <textField textAdjust="ScaleFont"><reportElement style="value" x="8" y="16" width="499" height="75"/><textFieldExpression><![CDATA[$P{OBSERVACOES}]]></textFieldExpression></textField>
             </frame>
             <staticText>
                 <reportElement x="0" y="266" width="515" height="20" forecolor="#495561"/>
                 <textElement><font fontName="SansSerif" size="6.5"/></textElement>
-                <text><![CDATA[O equipamento foi recebido/entregue conforme as informações acima. Valores, prazos e garantia seguem o diagnóstico técnico e a aprovação do cliente quando aplicável.]]></text>
+                <text><![CDATA[O equipamento foi recebido para manutenção conforme as informações acima e será submetido à avaliação técnica.]]></text>
             </staticText>
             <line><reportElement x="25" y="329" width="190" height="1"/><graphicElement><pen lineWidth="0.5"/></graphicElement></line>
             <line><reportElement x="300" y="329" width="190" height="1"/><graphicElement><pen lineWidth="0.5"/></graphicElement></line>
@@ -145,11 +124,11 @@
                 <reportElement x="0" y="438" width="515" height="2" backcolor="#11A8C7"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
-            <staticText>
-                <reportElement x="12" y="400" width="180" height="25" forecolor="#FFFFFF"/>
-                <textElement><font fontName="SansSerif" size="20" isBold="true" isItalic="true"/></textElement>
-                <text><![CDATA[Ação Games]]></text>
-            </staticText>
+            <textField>
+                <reportElement x="12" y="399" width="180" height="30" forecolor="#FFFFFF"/>
+                <textElement><font fontName="SansSerif" size="18" isBold="true"/></textElement>
+                <textFieldExpression><![CDATA["Ação Games"]]></textFieldExpression>
+            </textField>
             <staticText>
                 <reportElement x="13" y="424" width="170" height="11" forecolor="#D9E1EA"/>
                 <textElement><font fontName="SansSerif" size="7"/></textElement>
@@ -190,7 +169,7 @@ Instagram: @gamesacao]]></text></staticText>
                 <staticText><reportElement style="label" x="8" y="5" width="100" height="10"/><text><![CDATA[EQUIPAMENTO]]></text></staticText>
                 <textField textAdjust="ScaleFont">
                     <reportElement style="value" x="8" y="16" width="236" height="37"/>
-                    <textFieldExpression><![CDATA["Modelo: " + $P{EQUIPAMENTO} + "\nSérie: " + $P{NUMERO_SERIE} + " | Cor: " + $P{COR} + "\nStatus: " + $P{STATUS} + "\nEntrada: " + $P{DATA_ENTRADA} + " | Saída: " + $P{DATA_SAIDA}]]></textFieldExpression>
+                    <textFieldExpression><![CDATA["Modelo: " + $P{EQUIPAMENTO} + "\nSérie: " + $P{NUMERO_SERIE} + " | Cor: " + $P{COR} + "\nStatus: " + $P{STATUS} + "\nEntrada: " + $P{DATA_ENTRADA}]]></textFieldExpression>
                 </textField>
             </frame>
             <frame>
@@ -200,33 +179,15 @@ Instagram: @gamesacao]]></text></staticText>
                 <textField textAdjust="ScaleFont"><reportElement style="value" x="8" y="16" width="499" height="19"/><textFieldExpression><![CDATA[$P{PROBLEMA_RELATADO}]]></textFieldExpression></textField>
             </frame>
             <frame>
-                <reportElement x="0" y="616" width="252" height="47"/>
-                <box><pen lineWidth="0.5" lineColor="#D6DDE5"/></box>
-                <staticText><reportElement style="label" x="8" y="5" width="100" height="10"/><text><![CDATA[DIAGNÓSTICO]]></text></staticText>
-                <textField textAdjust="ScaleFont"><reportElement style="value" x="8" y="16" width="236" height="26"/><textFieldExpression><![CDATA[$P{DIAGNOSTICO}]]></textFieldExpression></textField>
-            </frame>
-            <frame>
-                <reportElement x="263" y="616" width="252" height="47"/>
-                <box><pen lineWidth="0.5" lineColor="#D6DDE5"/></box>
-                <staticText><reportElement style="label" x="8" y="5" width="130" height="10"/><text><![CDATA[SERVIÇO REALIZADO]]></text></staticText>
-                <textField textAdjust="ScaleFont"><reportElement style="value" x="8" y="16" width="236" height="26"/><textFieldExpression><![CDATA[$P{SERVICO_REALIZADO}]]></textFieldExpression></textField>
-            </frame>
-            <frame>
-                <reportElement x="0" y="670" width="370" height="42"/>
+                <reportElement x="0" y="616" width="515" height="96"/>
                 <box><pen lineWidth="0.5" lineColor="#D6DDE5"/></box>
                 <staticText><reportElement style="label" x="8" y="5" width="100" height="10"/><text><![CDATA[OBSERVAÇÕES]]></text></staticText>
-                <textField textAdjust="ScaleFont"><reportElement style="value" x="8" y="16" width="354" height="21"/><textFieldExpression><![CDATA[$P{OBSERVACOES}]]></textFieldExpression></textField>
-            </frame>
-            <frame>
-                <reportElement x="377" y="670" width="138" height="42" backcolor="#F5F8FA"/>
-                <box><pen lineWidth="0.5" lineColor="#D6DDE5"/></box>
-                <staticText><reportElement style="label" x="8" y="5" width="120" height="10"/><text><![CDATA[VALOR DO SERVIÇO]]></text></staticText>
-                <textField><reportElement x="8" y="17" width="122" height="17" forecolor="#101820"/><textElement><font fontName="SansSerif" size="10" isBold="true"/></textElement><textFieldExpression><![CDATA[$P{VALOR_SERVICO}]]></textFieldExpression></textField>
+                <textField textAdjust="ScaleFont"><reportElement style="value" x="8" y="16" width="499" height="75"/><textFieldExpression><![CDATA[$P{OBSERVACOES}]]></textFieldExpression></textField>
             </frame>
             <staticText>
                 <reportElement x="0" y="720" width="515" height="20" forecolor="#495561"/>
                 <textElement><font fontName="SansSerif" size="6.5"/></textElement>
-                <text><![CDATA[O equipamento foi recebido/entregue conforme as informações acima. Valores, prazos e garantia seguem o diagnóstico técnico e a aprovação do cliente quando aplicável.]]></text>
+                <text><![CDATA[O equipamento foi recebido para manutenção conforme as informações acima e será submetido à avaliação técnica.]]></text>
             </staticText>
             <line><reportElement x="25" y="783" width="190" height="1"/><graphicElement><pen lineWidth="0.5"/></graphicElement></line>
             <line><reportElement x="300" y="783" width="190" height="1"/><graphicElement><pen lineWidth="0.5"/></graphicElement></line>

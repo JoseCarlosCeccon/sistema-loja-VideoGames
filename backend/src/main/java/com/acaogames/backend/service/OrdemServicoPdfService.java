@@ -32,11 +32,12 @@ public class OrdemServicoPdfService {
         }
     };
 
-    private volatile JasperReport compiledReport;
+    private volatile JasperReport compiledEntryReport;
+    private volatile JasperReport compiledExitReport;
 
     public byte[] gerarPdf(OrdemServico ordemServico) {
         try {
-            JasperReport report = compiledReport();
+            JasperReport report = compiledReport(ordemServico.getDataSaida() == null);
             JasperPrint print = JasperFillManager.fillReport(report, parametros(ordemServico), new JREmptyDataSource(1));
             return JasperExportManager.exportReportToPdf(print);
         } catch (Exception exception) {
@@ -44,15 +45,22 @@ public class OrdemServicoPdfService {
         }
     }
 
-    private JasperReport compiledReport() throws Exception {
-        JasperReport report = compiledReport;
+    private JasperReport compiledReport(boolean entry) throws Exception {
+        JasperReport report = entry ? compiledEntryReport : compiledExitReport;
         if (report == null) {
             synchronized (this) {
-                report = compiledReport;
+                report = entry ? compiledEntryReport : compiledExitReport;
                 if (report == null) {
-                    try (InputStream template = new ClassPathResource("reports/ordem-servico.jrxml").getInputStream()) {
+                    String templatePath = entry
+                            ? "reports/ordem-servico-entrada.jrxml"
+                            : "reports/ordem-servico-saida.jrxml";
+                    try (InputStream template = new ClassPathResource(templatePath).getInputStream()) {
                         report = JasperCompileManager.compileReport(template);
-                        compiledReport = report;
+                        if (entry) {
+                            compiledEntryReport = report;
+                        } else {
+                            compiledExitReport = report;
+                        }
                     }
                 }
             }
@@ -82,6 +90,7 @@ public class OrdemServicoPdfService {
         params.put("DIAGNOSTICO", value(ordemServico.getDiagnostico()));
         params.put("SERVICO_REALIZADO", value(ordemServico.getServicoRealizado()));
         params.put("VALOR_SERVICO", formatCurrency(ordemServico.getValorServico()));
+        params.put("GARANTIA", GarantiaPrazo.descricao(ordemServico.getGarantiaDias()));
         params.put("OBSERVACOES", value(ordemServico.getObservacoes()));
         return params;
     }

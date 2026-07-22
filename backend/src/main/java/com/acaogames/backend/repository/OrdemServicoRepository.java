@@ -25,7 +25,7 @@ public class OrdemServicoRepository {
     private static final String BASE_SELECT =
             "SELECT os.id_ordem_servico, os.id_cliente, os.id_equipamento, os.id_usuario, os.numero_serie, os.cor, "
                     + "os.data_entrada, os.problema_relatado, os.status, os.diagnostico, os.servico_realizado, "
-                    + "os.valor_servico, os.data_saida, os.observacoes, os.data_criacao, os.data_atualizacao, "
+                    + "os.valor_servico, os.data_saida, os.garantia_dias, os.observacoes, os.data_criacao, os.data_atualizacao, "
                     + "c.id_cliente AS cliente_ref_id, c.nome AS cliente_nome, c.telefone AS cliente_telefone, "
                     + "c.cpf AS cliente_cpf, c.endereco AS cliente_endereco, c.email AS cliente_email, "
                     + "c.observacoes AS cliente_observacoes, c.ativo AS cliente_ativo, c.data_cadastro AS cliente_data_cadastro, "
@@ -62,9 +62,9 @@ public class OrdemServicoRepository {
     public OrdemServico create(OrdemServico ordemServico) {
         String sql = "INSERT INTO ordem_servico(id_cliente, id_equipamento, id_usuario, numero_serie, cor, "
                 + "data_entrada, problema_relatado, status, diagnostico, servico_realizado, valor_servico, "
-                + "data_saida, observacoes) VALUES(:idCliente, :idEquipamento, :idUsuario, :numeroSerie, :cor, "
+                + "data_saida, garantia_dias, observacoes) VALUES(:idCliente, :idEquipamento, :idUsuario, :numeroSerie, :cor, "
                 + ":dataEntrada, :problemaRelatado, :status, :diagnostico, :servicoRealizado, :valorServico, "
-                + ":dataSaida, :observacoes)";
+                + ":dataSaida, :garantiaDias, :observacoes)";
         MapSqlParameterSource params = toParams(ordemServico);
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcTemplate.update(sql, params, keyHolder, new String[]{"id_ordem_servico"});
@@ -80,6 +80,7 @@ public class OrdemServicoRepository {
                 + "id_usuario = :idUsuario, numero_serie = :numeroSerie, cor = :cor, data_entrada = :dataEntrada, "
                 + "problema_relatado = :problemaRelatado, status = :status, diagnostico = :diagnostico, "
                 + "servico_realizado = :servicoRealizado, valor_servico = :valorServico, data_saida = :dataSaida, "
+                + "garantia_dias = :garantiaDias, "
                 + "observacoes = :observacoes, data_atualizacao = CURRENT_TIMESTAMP "
                 + "WHERE id_ordem_servico = :idOrdemServico";
         MapSqlParameterSource params = toParams(ordemServico);
@@ -161,6 +162,7 @@ public class OrdemServicoRepository {
                 .addValue("servicoRealizado", ordemServico.getServicoRealizado())
                 .addValue("valorServico", ordemServico.getValorServico())
                 .addValue("dataSaida", JdbcTemporalValues.toDatabaseValue(ordemServico.getDataSaida()))
+                .addValue("garantiaDias", ordemServico.getGarantiaDias() == null ? 0 : ordemServico.getGarantiaDias())
                 .addValue("observacoes", ordemServico.getObservacoes());
     }
 
@@ -210,6 +212,7 @@ public class OrdemServicoRepository {
                 ordemServico.setServicoRealizado(rs.getString("servico_realizado"));
                 ordemServico.setValorServico(rs.getBigDecimal("valor_servico"));
                 ordemServico.setDataSaida(JdbcTemporalValues.getLocalDate(rs, "data_saida"));
+                ordemServico.setGarantiaDias(rs.getInt("garantia_dias"));
                 ordemServico.setObservacoes(rs.getString("observacoes"));
                 ordemServico.setDataCriacao(JdbcTemporalValues.getLocalDateTime(rs, "data_criacao"));
                 ordemServico.setDataAtualizacao(JdbcTemporalValues.getLocalDateTime(rs, "data_atualizacao"));

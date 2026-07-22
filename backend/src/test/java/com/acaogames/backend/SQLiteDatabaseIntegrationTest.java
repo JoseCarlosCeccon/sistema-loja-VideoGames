@@ -48,10 +48,20 @@ class SQLiteDatabaseIntegrationTest {
         Integer foreignKeys = jdbcTemplate.queryForObject("PRAGMA foreign_keys", Integer.class);
         Integer clientesIniciais = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM cliente", Integer.class);
         Integer produtosIniciais = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM produto", Integer.class);
+        Integer garantiaOrdem = jdbcTemplate.queryForObject(
+                "SELECT garantia_dias FROM ordem_servico WHERE id_ordem_servico = 1",
+                Integer.class
+        );
+        Integer garantiaVenda = jdbcTemplate.queryForObject(
+                "SELECT garantia_dias FROM venda WHERE id_venda = 1",
+                Integer.class
+        );
 
         assertEquals(Integer.valueOf(1), foreignKeys);
         assertEquals(Integer.valueOf(5), clientesIniciais);
         assertEquals(Integer.valueOf(10), produtosIniciais);
+        assertEquals(Integer.valueOf(90), garantiaOrdem);
+        assertEquals(Integer.valueOf(0), garantiaVenda);
 
         Cliente cliente = new Cliente();
         cliente.setNome("Teste SQLite");

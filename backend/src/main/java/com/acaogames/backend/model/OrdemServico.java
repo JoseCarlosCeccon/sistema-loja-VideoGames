@@ -19,6 +19,7 @@ public class OrdemServico {
     private String servicoRealizado;
     private BigDecimal valorServico;
     private LocalDate dataSaida;
+    private Integer garantiaDias;
     private String observacoes;
     private LocalDateTime dataCriacao;
     private LocalDateTime dataAtualizacao;
@@ -125,6 +126,14 @@ public class OrdemServico {
 
     public void setDataSaida(LocalDate dataSaida) {
         this.dataSaida = dataSaida;
+    }
+
+    public Integer getGarantiaDias() {
+        return garantiaDias;
+    }
+
+    public void setGarantiaDias(Integer garantiaDias) {
+        this.garantiaDias = garantiaDias;
     }
 
     public String getObservacoes() {

@@ -46,8 +46,8 @@ public class VendaRepository {
     }
 
     public Venda create(Venda venda) {
-        String sql = "INSERT INTO venda(id_cliente, data_venda, valor_total, forma_pagamento, observacoes) "
-                + "VALUES(:idCliente, :dataVenda, :valorTotal, :formaPagamento, :observacoes)";
+        String sql = "INSERT INTO venda(id_cliente, data_venda, valor_total, forma_pagamento, garantia_dias, observacoes) "
+                + "VALUES(:idCliente, :dataVenda, :valorTotal, :formaPagamento, :garantiaDias, :observacoes)";
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcTemplate.update(sql, toParams(venda), keyHolder, new String[]{"id_venda"});
         Number key = keyHolder.getKey();
@@ -59,7 +59,8 @@ public class VendaRepository {
 
     public Venda update(Venda venda) {
         String sql = "UPDATE venda SET id_cliente = :idCliente, data_venda = :dataVenda, "
-                + "valor_total = :valorTotal, forma_pagamento = :formaPagamento, observacoes = :observacoes "
+                + "valor_total = :valorTotal, forma_pagamento = :formaPagamento, garantia_dias = :garantiaDias, "
+                + "observacoes = :observacoes "
                 + "WHERE id_venda = :idVenda";
         MapSqlParameterSource params = toParams(venda);
         params.addValue("idVenda", venda.getIdVenda());
@@ -90,6 +91,7 @@ public class VendaRepository {
                 .addValue("dataVenda", JdbcTemporalValues.toDatabaseValue(venda.getDataVenda()))
                 .addValue("valorTotal", venda.getValorTotal())
                 .addValue("formaPagamento", venda.getFormaPagamento())
+                .addValue("garantiaDias", venda.getGarantiaDias() == null ? 0 : venda.getGarantiaDias())
                 .addValue("observacoes", venda.getObservacoes());
     }
 
@@ -108,6 +110,7 @@ public class VendaRepository {
                 venda.setDataVenda(JdbcTemporalValues.getLocalDate(rs, "data_venda"));
                 venda.setValorTotal(rs.getBigDecimal("valor_total"));
                 venda.setFormaPagamento(rs.getString("forma_pagamento"));
+                venda.setGarantiaDias(rs.getInt("garantia_dias"));
                 venda.setObservacoes(rs.getString("observacoes"));
                 return venda;
             }

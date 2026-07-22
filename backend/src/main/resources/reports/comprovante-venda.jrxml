@@ -21,6 +21,7 @@
     <parameter name="CLIENTE_TELEFONE" class="java.lang.String"/>
     <parameter name="FORMA_PAGAMENTO" class="java.lang.String"/>
     <parameter name="VALOR_TOTAL" class="java.lang.String"/>
+    <parameter name="GARANTIA" class="java.lang.String"/>
     <parameter name="OBSERVACOES" class="java.lang.String"/>
 
     <field name="ITEM_NOME" class="java.lang.String"/>
@@ -43,9 +44,9 @@
                 </graphicElement>
             </rectangle>
             <staticText>
-                <reportElement x="0" y="3" width="515" height="34" forecolor="#FFFFFF"/>
-                <textElement textAlignment="Center">
-                    <font fontName="SansSerif" size="27" isBold="true" isItalic="true"/>
+                <reportElement x="18" y="3" width="260" height="34" forecolor="#FFFFFF"/>
+                <textElement>
+                    <font fontName="SansSerif" size="22" isBold="true"/>
                 </textElement>
                 <text><![CDATA[Ação Games]]></text>
             </staticText>
@@ -57,7 +58,7 @@
                 <text><![CDATA[Comprovante de pagamento]]></text>
             </staticText>
             <textField>
-                <reportElement x="300" y="13" width="195" height="16" forecolor="#FFFFFF"/>
+                <reportElement x="300" y="8" width="195" height="22" forecolor="#FFFFFF"/>
                 <textElement textAlignment="Right">
                     <font fontName="SansSerif" size="14" isBold="true"/>
                 </textElement>
@@ -169,6 +170,23 @@
 
     <summary>
         <band height="168">
+            <frame>
+                <reportElement x="0" y="14" width="270" height="48" backcolor="#F5F8FA"/>
+                <box>
+                    <pen lineWidth="0.5" lineColor="#D6DDE5"/>
+                </box>
+                <staticText>
+                    <reportElement style="label" x="10" y="8" width="110" height="12"/>
+                    <text><![CDATA[GARANTIA]]></text>
+                </staticText>
+                <textField textAdjust="ScaleFont">
+                    <reportElement x="10" y="23" width="250" height="18" forecolor="#101820"/>
+                    <textElement>
+                        <font fontName="SansSerif" size="12" isBold="true"/>
+                    </textElement>
+                    <textFieldExpression><![CDATA[$P{GARANTIA}]]></textFieldExpression>
+                </textField>
+            </frame>
             <frame>
                 <reportElement x="282" y="14" width="233" height="48" backcolor="#F5F8FA"/>
                 <box>

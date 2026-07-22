@@ -15,6 +15,7 @@ public class RegistrarSaidaRequest {
     private BigDecimal valorServico;
 
     private String formaPagamento;
+    private Integer garantiaDias;
     private String observacoes;
 
     public Long getIdUsuario() {
@@ -63,6 +64,14 @@ public class RegistrarSaidaRequest {
 
     public void setFormaPagamento(String formaPagamento) {
         this.formaPagamento = formaPagamento;
+    }
+
+    public Integer getGarantiaDias() {
+        return garantiaDias;
+    }
+
+    public void setGarantiaDias(Integer garantiaDias) {
+        this.garantiaDias = garantiaDias;
     }
 
     public String getObservacoes() {

@@ -133,6 +133,7 @@ public class VendaService {
         venda.setCliente(buscarClienteOpcional(request.getIdCliente()));
         venda.setDataVenda(request.getDataVenda() == null ? LocalDate.now() : request.getDataVenda());
         venda.setFormaPagamento(normalizarFormaPagamento(request.getFormaPagamento()));
+        venda.setGarantiaDias(GarantiaPrazo.validar(request.getGarantiaDias()));
         venda.setObservacoes(request.getObservacoes());
     }
 
