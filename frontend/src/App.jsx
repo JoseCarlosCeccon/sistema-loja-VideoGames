@@ -1,4 +1,4 @@
-import { lazy, startTransition, Suspense, useEffect, useLayoutEffect, useState } from "react";
+import React, { lazy, startTransition, Suspense, useEffect, useLayoutEffect, useState } from "react";
 import { api, AUTH_REJECTED_EVENT, AUTH_STORAGE_KEY } from "./services/api";
 import LoginPage from "./pages/Login";
 import { formatCpf, formatPhone } from "./utils/masks";

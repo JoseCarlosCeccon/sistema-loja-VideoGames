@@ -1,4 +1,7 @@
 spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:sqlite:../data/acaogames.db?busy_timeout=5000&foreign_keys=on&journal_mode=WAL}
     driver-class-name: org.sqlite.JDBC
@@ -11,6 +14,10 @@ spring:
     init:
       mode: never
 
+logging:
+  file:
+    name: ../logs/backend.log
+
 server:
   port: ${SERVER_PORT:8080}
 
@@ -18,3 +25,4 @@ app:
   default-user-id: ${APP_DEFAULT_USER_ID:1}
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}
+

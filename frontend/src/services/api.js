@@ -62,7 +62,7 @@ async function request(path, options = {}) {
     }
 
     if (error instanceof TypeError || error.message === "Failed to fetch") {
-      throw new Error("Nao foi possivel conectar a API. Verifique se o backend esta em execucao e reinicie o servidor do frontend para ativar o proxy.");
+      throw new Error("Nao foi possivel conectar a API. Verifique se o backend esta em execucao em http://localhost:8080.");
     }
 
     throw error;
