@@ -60,3 +60,32 @@ Este documento registra os marcos da correcao solicitada e a fonte de verdade ad
 ## Arquivos do marco 4
 
 - `backend/src/test/java/com/acaogames/backend/SQLiteDatabaseIntegrationTest.java`
+
+## Validacao final
+
+Executada em 14/08/2026:
+
+- Backend: `backend/mvnw.cmd test` - 11 testes, sem falhas.
+- Frontend: `npm run build` - 51 modulos transformados e build de producao concluido.
+- Nova venda: venda e movimento criados; os dois indicadores financeiros passam a incluir o valor.
+- Edicao de R$ 500,00 para R$ 400,00: venda, movimento e Home passam a R$ 400,00.
+- Alteracao de itens e pagamento: total, forma de pagamento e movimento sao recriados de modo coerente na mesma transacao.
+- Remocao/desvinculacao: ao apagar o movimento vinculado, a venda permanece no historico, mas deixa de compor os indicadores financeiros; ao apagar a venda, estoque e movimento tambem sao revertidos.
+- PDF pelo Caixa: o build inclui a acao que abre o endpoint compartilhado da venda.
+- Pesquisa: testes cobrem cliente, venda de balcao, produto/item, ID, equipamento e servico conforme as relacoes existentes.
+- Via unica: o PDF foi gerado duas vezes; o documento de referencia possui uma pagina e nao contem "Via do Cliente" nem "Via da Loja".
+
+## Comportamentos substituidos e riscos conhecidos
+
+- "Caixa do dia" deixou de ser a soma paralela de vendas e servicos e agora representa o saldo liquido real do dia em `movimento_caixa`, incluindo saidas e lancamentos manuais.
+- `valorTotal` e `subtotal` recebidos na requisicao nao substituem mais os calculos derivados dos itens. Integracoes externas que enviavam descontos apenas nesses campos devem representar o valor final nos valores unitarios dos itens.
+- O modelo nao possui status de cancelamento de venda. O fluxo existente continua usando exclusao da venda ou exclusao/desvinculacao do movimento financeiro.
+- O modelo tambem nao relaciona venda diretamente a equipamento; nenhum campo ou tabela artificial foi criado para simular essa relacao.
+
+## Historico de commits
+
+- `f9ae35f` - fonte financeira unica do dashboard e testes do ciclo de venda.
+- `437ce3c` - comprovante de venda na tela Caixa.
+- `bbaa336` - pesquisa relacional de vendas e caixa.
+- `186a28f` - garantia automatizada de PDF de venda em via unica.
+- `c0244a7` - total da venda derivado dos itens.
