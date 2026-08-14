@@ -25,3 +25,13 @@ Este documento registra os marcos da correcao solicitada e a fonte de verdade ad
 - `backend/src/main/java/com/acaogames/backend/service/DashboardService.java`
 - `backend/src/main/java/com/acaogames/backend/service/VendaService.java`
 - `backend/src/test/java/com/acaogames/backend/service/VendaDashboardIntegrationTest.java`
+
+## Marco 2 - comprovante de venda no Caixa
+
+- Movimentos vinculados a uma venda exibem a acao `PDF` na coluna de acoes do Caixa.
+- A acao reutiliza o endpoint existente `GET /api/vendas/{id}/pdf` e o helper autenticado `api.fileUrl`.
+- Nenhuma logica de geracao de comprovante foi duplicada no frontend ou no backend.
+
+## Arquivos do marco 2
+
+- `frontend/src/pages/Caixa.jsx`

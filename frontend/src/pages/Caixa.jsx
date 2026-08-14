@@ -299,6 +299,15 @@ export default function CaixaPage({ onFeedback, onDashboardRefresh }) {
     }
   }
 
+  function openSaleReceiptPdf(movimento) {
+    const idVenda = movimento?.venda?.idVenda;
+    if (!idVenda) {
+      return;
+    }
+
+    window.open(api.fileUrl(`/vendas/${idVenda}/pdf`), "_blank", "noopener,noreferrer");
+  }
+
   return (
     <section className="management-page caixa-page" aria-labelledby="caixa-title">
       <div className="management-hero">
@@ -445,6 +454,16 @@ export default function CaixaPage({ onFeedback, onDashboardRefresh }) {
                     </td>
                     <td>
                       <div className="row-actions">
+                        {movimento.venda?.idVenda ? (
+                          <button
+                            type="button"
+                            className="table-action"
+                            onClick={() => openSaleReceiptPdf(movimento)}
+                            aria-label={`Visualizar PDF da venda ${movimento.venda.idVenda}`}
+                          >
+                            PDF
+                          </button>
+                        ) : null}
                         <button type="button" className="table-action table-action--edit" onClick={() => openCashEditModal(movimento)}>
                           Editar
                         </button>
