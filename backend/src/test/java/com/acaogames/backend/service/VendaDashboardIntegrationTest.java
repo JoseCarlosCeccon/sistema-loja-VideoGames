@@ -85,8 +85,10 @@ class VendaDashboardIntegrationTest {
     void deveUsarSubtotalCalculadoDosItens() {
         ItemVendaRequest item = item(1L, 2, "25.00");
         item.setSubtotal(new BigDecimal("999.00"));
+        VendaRequest request = vendaRequest("DINHEIRO", item);
+        request.setValorTotal(new BigDecimal("999.00"));
 
-        Venda venda = vendaService.criar(vendaRequest("DINHEIRO", item));
+        Venda venda = vendaService.criar(request);
 
         assertMoney("50.00", venda.getValorTotal());
         assertMoney("50.00", venda.getItens().get(0).getSubtotal());

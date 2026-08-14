@@ -93,7 +93,7 @@ public class VendaService {
     public Venda criar(VendaRequest request) {
         UsuarioSistema usuario = buscarUsuario(request.getIdUsuario());
         Venda venda = montarVenda(request);
-        venda.setValorTotal(calcularTotal(request.getItens(), request.getValorTotal()));
+        venda.setValorTotal(calcularTotal(request.getItens()));
         Venda criada = vendaRepository.create(venda);
         criarItens(criada, request.getItens(), usuario);
         criarMovimentoCaixa(criada, usuario);
@@ -109,7 +109,7 @@ public class VendaService {
         movimentoCaixaRepository.deleteByVendaId(idVenda);
 
         preencherVenda(venda, request);
-        venda.setValorTotal(calcularTotal(request.getItens(), request.getValorTotal()));
+        venda.setValorTotal(calcularTotal(request.getItens()));
         Venda atualizada = vendaRepository.update(venda);
         criarItens(atualizada, request.getItens(), usuario);
         criarMovimentoCaixa(atualizada, usuario);
@@ -187,12 +187,12 @@ public class VendaService {
         }
     }
 
-    private BigDecimal calcularTotal(List<ItemVendaRequest> itens, BigDecimal valorTotalInformado) {
+    private BigDecimal calcularTotal(List<ItemVendaRequest> itens) {
         BigDecimal total = BigDecimal.ZERO;
         for (ItemVendaRequest item : itens) {
             total = total.add(calcularSubtotal(item));
         }
-        return valorTotalInformado == null ? total : valorTotalInformado;
+        return total;
     }
 
     private BigDecimal calcularSubtotal(ItemVendaRequest item) {

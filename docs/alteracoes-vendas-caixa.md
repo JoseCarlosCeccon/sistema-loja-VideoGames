@@ -17,6 +17,7 @@ Este documento registra os marcos da correcao solicitada e a fonte de verdade ad
 - "Caixa do dia" usa o saldo liquido real do dia (entradas menos saidas), incluindo vendas, servicos e lancamentos manuais.
 - O movimento automatico passa a usar a data da venda, mantendo o periodo financeiro coerente em vendas criadas ou editadas com outra data.
 - Subtotais de itens sao sempre derivados de quantidade x valor unitario; um subtotal enviado pelo cliente nao pode deixar venda e itens divergentes.
+- O total da venda tambem e sempre derivado da soma desses itens. O campo de entrada legado `valorTotal` continua aceito na desserializacao, mas nao substitui o calculo canonico.
 - Criacao, edicao de valor, alteracao de itens/pagamento, exclusao e desvinculacao foram cobertas por teste de integracao.
 
 ## Arquivos do marco 1
