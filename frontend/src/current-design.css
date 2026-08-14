@@ -779,6 +779,23 @@ td:first-child {
   box-shadow: 0 0 0 4px rgba(15, 143, 158, 0.11);
 }
 
+.searchable-select__options {
+  border-color: var(--line-strong);
+  background: #ffffff;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.16);
+}
+
+.searchable-select__option {
+  color: var(--text);
+}
+
+.searchable-select__option:hover,
+.searchable-select__option--active,
+.searchable-select__option[aria-selected="true"] {
+  background: #eaf7f8;
+  color: var(--cyan-soft);
+}
+
 .selected-card {
   border-color: #bddfe5;
   background: #f3fbfc;

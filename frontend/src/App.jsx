@@ -1,4 +1,4 @@
-import React, { lazy, startTransition, Suspense, useEffect, useLayoutEffect, useState } from "react";
+import React, { lazy, startTransition, Suspense, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { api, AUTH_REJECTED_EVENT, AUTH_STORAGE_KEY } from "./services/api";
 import LoginPage from "./pages/Login";
 import { formatCpf, formatPhone } from "./utils/masks";
@@ -1058,6 +1058,21 @@ function EntradaModal({
   const selectedEquipamento = equipamentos.find(
     (equipamento) => String(equipamento.idEquipamento) === String(form.idEquipamento)
   );
+  const clienteOptions = clientes.map((cliente) => ({
+    value: cliente.idCliente,
+    label: `${cliente.nome}${cliente.telefone ? ` - ${cliente.telefone}` : ""}`,
+    searchText: [cliente.nome, cliente.telefone, cliente.cpf, cliente.email].filter(Boolean).join(" ")
+  }));
+  const equipamentoOptions = equipamentos.map((equipamento) => ({
+    value: equipamento.idEquipamento,
+    label: equipamentoLabel(equipamento),
+    searchText: [
+      equipamento.marca,
+      equipamento.tipoEquipamento,
+      equipamento.modelo,
+      equipamento.descricao
+    ].filter(Boolean).join(" ")
+  }));
 
   return (
     <div className="modal-backdrop" role="presentation">
@@ -1090,17 +1105,17 @@ function EntradaModal({
 
               {clienteMode === "existente" ? (
                 <>
-                  <label className="field">
+                  <div className="field">
                     <span>Cliente cadastrado</span>
-                    <select required value={form.idCliente} onChange={(event) => onChange("idCliente", event.target.value)}>
-                      <option value="">Selecione o cliente</option>
-                      {clientes.map((cliente) => (
-                        <option key={cliente.idCliente} value={cliente.idCliente}>
-                          {cliente.nome} {cliente.telefone ? `- ${cliente.telefone}` : ""}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                    <SearchableSelect
+                      required
+                      value={form.idCliente}
+                      options={clienteOptions}
+                      placeholder="Digite o nome, telefone, CPF ou email"
+                      emptyMessage="Nenhum cliente encontrado"
+                      onChange={(value) => onChange("idCliente", value)}
+                    />
+                  </div>
                   {!clientes.length ? (
                     <p className="form-hint">Nenhum cliente cadastrado. Use a opcao "Novo cliente".</p>
                   ) : null}
@@ -1167,17 +1182,17 @@ function EntradaModal({
 
               {equipamentoMode === "existente" ? (
                 <>
-                  <label className="field">
+                  <div className="field">
                     <span>Modelo do equipamento</span>
-                    <select required value={form.idEquipamento} onChange={(event) => onChange("idEquipamento", event.target.value)}>
-                      <option value="">Selecione o modelo</option>
-                      {equipamentos.map((equipamento) => (
-                        <option key={equipamento.idEquipamento} value={equipamento.idEquipamento}>
-                          {equipamentoLabel(equipamento)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                    <SearchableSelect
+                      required
+                      value={form.idEquipamento}
+                      options={equipamentoOptions}
+                      placeholder="Digite a marca, tipo ou modelo"
+                      emptyMessage="Nenhum equipamento encontrado"
+                      onChange={(value) => onChange("idEquipamento", value)}
+                    />
+                  </div>
                   {!equipamentos.length ? (
                     <p className="form-hint">Nenhum modelo cadastrado. Use a opcao "Novo modelo".</p>
                   ) : null}
@@ -1286,6 +1301,18 @@ function SaidaModal({ ordens, form, saving, onClose, onSubmit, onChange }) {
   const ordensDisponiveis = ordens.filter((ordem) => !["ENTREGUE", "CANCELADO"].includes(String(ordem.status || "")));
   const selectedOrder = ordens.find((ordem) => String(ordem.idOrdemServico) === String(form.idOrdemServico));
   const valorServico = parseMoney(form.valorServico);
+  const ordemOptions = ordensDisponiveis.map((ordem) => ({
+    value: ordem.idOrdemServico,
+    label: `#${formatOrderNumber(ordem.idOrdemServico)} - ${ordem.cliente?.nome || "Cliente"} - ${equipamentoLabel(ordem.equipamento)}`,
+    searchText: [
+      ordem.idOrdemServico,
+      ordem.cliente?.nome,
+      ordem.cliente?.telefone,
+      equipamentoLabel(ordem.equipamento),
+      ordem.numeroSerie,
+      ordem.problemaRelatado
+    ].filter(Boolean).join(" ")
+  }));
 
   return (
     <div className="modal-backdrop" role="presentation">
@@ -1307,17 +1334,17 @@ function SaidaModal({ ordens, form, saving, onClose, onSubmit, onChange }) {
           <div className="entry-form__grid">
             <fieldset className="form-card form-card--wide">
               <legend>Ordem de servico</legend>
-              <label className="field">
+              <div className="field">
                 <span>OS para entrega</span>
-                <select required value={form.idOrdemServico} onChange={(event) => onChange("idOrdemServico", event.target.value)}>
-                  <option value="">Selecione uma OS</option>
-                  {ordensDisponiveis.map((ordem) => (
-                    <option key={ordem.idOrdemServico} value={ordem.idOrdemServico}>
-                      #{formatOrderNumber(ordem.idOrdemServico)} - {ordem.cliente?.nome || "Cliente"} - {equipamentoLabel(ordem.equipamento)}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                <SearchableSelect
+                  required
+                  value={form.idOrdemServico}
+                  options={ordemOptions}
+                  placeholder="Digite o numero da OS, cliente ou equipamento"
+                  emptyMessage="Nenhuma OS encontrada"
+                  onChange={(value) => onChange("idOrdemServico", value)}
+                />
+              </div>
 
               {!ordensDisponiveis.length ? (
                 <p className="form-hint">Nenhuma OS aberta ou pronta para entrega foi encontrada.</p>
@@ -1426,6 +1453,16 @@ function VendaModal({
   onProductSubmit
 }) {
   const total = calculateVendaTotal(form.itens);
+  const clienteOptions = clientes.map((cliente) => ({
+    value: cliente.idCliente,
+    label: `${cliente.nome}${cliente.telefone ? ` - ${cliente.telefone}` : ""}`,
+    searchText: [cliente.nome, cliente.telefone, cliente.cpf, cliente.email].filter(Boolean).join(" ")
+  }));
+  const produtoOptions = produtos.map((produto) => ({
+    value: produto.idProduto,
+    label: `${produto.nome} - estoque ${produto.quantidadeEstoque}`,
+    searchText: [produto.idProduto, produto.nome, produto.categoria, produto.descricao].filter(Boolean).join(" ")
+  }));
 
   return (
     <div className="modal-backdrop" role="presentation">
@@ -1460,17 +1497,16 @@ function VendaModal({
                     ))}
                   </select>
                 </label>
-                <label className="field field--wide">
+                <div className="field field--wide">
                   <span>Cliente</span>
-                  <select value={form.idCliente} onChange={(event) => onChange("idCliente", event.target.value)}>
-                    <option value="">Venda balcao / sem cliente</option>
-                    {clientes.map((cliente) => (
-                      <option key={cliente.idCliente} value={cliente.idCliente}>
-                        {cliente.nome} {cliente.telefone ? `- ${cliente.telefone}` : ""}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                  <SearchableSelect
+                    value={form.idCliente}
+                    options={clienteOptions}
+                    placeholder="Venda balcao ou digite o nome do cliente"
+                    emptyMessage="Nenhum cliente encontrado"
+                    onChange={(value) => onChange("idCliente", value)}
+                  />
+                </div>
                 <label className="field field--wide">
                   <span>Garantia</span>
                   <select required value={form.garantiaDias} onChange={(event) => onChange("garantiaDias", event.target.value)}>
@@ -1504,17 +1540,17 @@ function VendaModal({
 
                   return (
                     <div className="sale-item-row" key={index}>
-                      <label className="field">
+                      <div className="field">
                         <span>Produto</span>
-                        <select required value={item.idProduto} onChange={(event) => onItemChange(index, "idProduto", event.target.value)}>
-                          <option value="">Selecione</option>
-                          {produtos.map((produtoItem) => (
-                            <option key={produtoItem.idProduto} value={produtoItem.idProduto}>
-                              {produtoItem.nome} - estoque {produtoItem.quantidadeEstoque}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
+                        <SearchableSelect
+                          required
+                          value={item.idProduto}
+                          options={produtoOptions}
+                          placeholder="Digite o nome, categoria ou codigo"
+                          emptyMessage="Nenhum produto encontrado"
+                          onChange={(value) => onItemChange(index, "idProduto", value)}
+                        />
+                      </div>
                       <label className="field">
                         <span>Qtd</span>
                         <input type="number" min="1" required value={item.quantidade} onChange={(event) => onItemChange(index, "quantidade", event.target.value)} />
@@ -1661,6 +1697,140 @@ function VendaModal({
           </footer>
         </form>
       </section>
+    </div>
+  );
+}
+
+function SearchableSelect({
+  value,
+  options,
+  onChange,
+  placeholder,
+  emptyMessage = "Nenhuma opcao encontrada",
+  required = false
+}) {
+  const listId = useId();
+  const inputRef = useRef(null);
+  const selectedOption = options.find((option) => String(option.value) === String(value));
+  const [query, setQuery] = useState(() => selectedOption?.label || "");
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const filterQuery = selectedOption && query === selectedOption.label ? "" : query;
+  const normalizedQuery = normalizeSearchText(filterQuery);
+  const queryTokens = normalizedQuery.split(/\s+/).filter(Boolean);
+  const filteredOptions = options.filter((option) => {
+    const searchableText = normalizeSearchText(`${option.label || ""} ${option.searchText || ""}`);
+    return queryTokens.every((token) => searchableText.includes(token));
+  }).slice(0, 50);
+
+  useEffect(() => {
+    setQuery(selectedOption?.label || "");
+  }, [value, selectedOption?.label]);
+
+  useEffect(() => {
+    const hasUnselectedText = !value && Boolean(query.trim());
+    inputRef.current?.setCustomValidity(
+      hasUnselectedText ? "Selecione uma opcao valida da lista." : ""
+    );
+  }, [query, value]);
+
+  function selectOption(option) {
+    setQuery(option.label);
+    setOpen(false);
+    setActiveIndex(0);
+    onChange(String(option.value));
+  }
+
+  function handleInputChange(event) {
+    const nextQuery = event.target.value;
+    setQuery(nextQuery);
+    setOpen(true);
+    setActiveIndex(0);
+
+    if (!selectedOption || nextQuery !== selectedOption.label) {
+      onChange("");
+    }
+  }
+
+  function handleKeyDown(event) {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setOpen(true);
+      setActiveIndex((current) => Math.min(current + 1, Math.max(filteredOptions.length - 1, 0)));
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setOpen(true);
+      setActiveIndex((current) => Math.max(current - 1, 0));
+      return;
+    }
+
+    if (event.key === "Enter" && open && filteredOptions[activeIndex]) {
+      event.preventDefault();
+      selectOption(filteredOptions[activeIndex]);
+      return;
+    }
+
+    if (event.key === "Escape") {
+      setOpen(false);
+    }
+  }
+
+  return (
+    <div
+      className="searchable-select"
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) {
+          setOpen(false);
+        }
+      }}
+    >
+      <input
+        ref={inputRef}
+        type="search"
+        role="combobox"
+        aria-autocomplete="list"
+        aria-expanded={open}
+        aria-controls={listId}
+        aria-activedescendant={open && filteredOptions[activeIndex]
+          ? `${listId}-${filteredOptions[activeIndex].value}`
+          : undefined}
+        autoComplete="off"
+        required={required}
+        value={query}
+        placeholder={placeholder}
+        onChange={handleInputChange}
+        onFocus={(event) => {
+          event.currentTarget.select();
+          setOpen(true);
+          setActiveIndex(0);
+        }}
+        onKeyDown={handleKeyDown}
+      />
+
+      {open ? (
+        <div id={listId} className="searchable-select__options" role="listbox">
+          {filteredOptions.length ? filteredOptions.map((option, index) => (
+            <button
+              key={option.value}
+              id={`${listId}-${option.value}`}
+              type="button"
+              role="option"
+              aria-selected={String(option.value) === String(value)}
+              className={`searchable-select__option ${index === activeIndex ? "searchable-select__option--active" : ""}`}
+              onMouseDown={(event) => event.preventDefault()}
+              onMouseEnter={() => setActiveIndex(index)}
+              onClick={() => selectOption(option)}
+            >
+              {option.label}
+            </button>
+          )) : (
+            <div className="searchable-select__empty">{emptyMessage}</div>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -1952,6 +2122,14 @@ function todayIsoDate() {
 function optionalText(value) {
   const text = String(value || "").trim();
   return text.length ? text : null;
+}
+
+function normalizeSearchText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 }
 
 function readStoredUser() {
