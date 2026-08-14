@@ -8,6 +8,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.acaogames.backend.model.Cliente;
 import com.acaogames.backend.model.Venda;
 import com.acaogames.backend.repository.ClienteRepository;
+import com.acaogames.backend.dto.RelatorioResponse;
+import com.acaogames.backend.service.RelatorioService;
 import com.acaogames.backend.service.VendaPdfService;
 import com.acaogames.backend.service.VendaService;
 import java.io.IOException;
@@ -42,6 +44,9 @@ class SQLiteDatabaseIntegrationTest {
 
     @Autowired
     private VendaPdfService vendaPdfService;
+
+    @Autowired
+    private RelatorioService relatorioService;
 
     @Test
     void deveInicializarBancoEPermitirCrud() {
@@ -105,6 +110,28 @@ class SQLiteDatabaseIntegrationTest {
         assertTrue(primeiroPdf.length > 0);
         assertNotNull(segundoPdf);
         assertTrue(segundoPdf.length > 0);
+    }
+
+    @Test
+    void devePesquisarVendasPorClienteProdutoEIdentificador() {
+        assertReportContainsId(relatorioService.vendas(null, null, "Joao Silva", 0, 20), 1L);
+        assertReportContainsId(relatorioService.vendas(null, null, "Controle PS4 Usado", 0, 20), 2L);
+        assertReportContainsId(relatorioService.vendas(null, null, "Venda balcao", 0, 20), 3L);
+        assertReportContainsId(relatorioService.vendas(null, null, "3", 0, 20), 3L);
+    }
+
+    @Test
+    void devePesquisarCaixaPelosRelacionamentosDaVendaEDaOrdem() {
+        assertReportContainsId(relatorioService.caixa(null, null, "Lucas Almeida", 0, 20), 3L);
+        assertReportContainsId(relatorioService.caixa(null, null, "PlayStation 4 Slim", 0, 20), 1L);
+        assertReportContainsId(relatorioService.caixa(null, null, "Troca do conector HDMI", 0, 20), 1L);
+    }
+
+    private void assertReportContainsId(RelatorioResponse report, Long id) {
+        assertTrue(
+                report.getRows().stream().anyMatch(row -> id.longValue() == ((Number) row.get("id")).longValue()),
+                "O relatorio deveria conter o registro " + id
+        );
     }
 
     private static void deleteDatabaseFiles() {

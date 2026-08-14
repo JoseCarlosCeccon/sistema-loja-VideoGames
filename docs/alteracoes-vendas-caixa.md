@@ -35,3 +35,16 @@ Este documento registra os marcos da correcao solicitada e a fonte de verdade ad
 ## Arquivos do marco 2
 
 - `frontend/src/pages/Caixa.jsx`
+
+## Marco 3 - pesquisa relacional
+
+- A pesquisa do relatorio de vendas mantem os campos anteriores e passa a consultar tambem telefone, CPF e email do cliente.
+- Produtos e itens relacionados sao pesquisados por nome, categoria, descricao e identificadores.
+- A pesquisa do relatorio de caixa passa a resolver, na mesma query, dados da venda vinculada (cliente e produtos) e da OS vinculada (cliente, equipamento, numero de serie, problema, diagnostico e servico realizado).
+- As relacoes sao consultadas com `EXISTS`, evitando duplicidade de vendas, contagens incorretas e requisicoes adicionais.
+- Nao foi criada relacao entre venda e equipamento: no modelo atual, equipamento pertence a ordem de servico. Por isso equipamento e servico sao pesquisaveis no caixa e nas ordens; produtos/itens sao pesquisaveis nas vendas.
+
+## Arquivos do marco 3
+
+- `backend/src/main/java/com/acaogames/backend/service/RelatorioService.java`
+- `backend/src/test/java/com/acaogames/backend/SQLiteDatabaseIntegrationTest.java`
