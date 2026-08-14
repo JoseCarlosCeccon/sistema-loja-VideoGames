@@ -115,6 +115,16 @@ public class MovimentoCaixaRepository {
         return total == null ? BigDecimal.ZERO : total;
     }
 
+    public BigDecimal totalVendasPorData(LocalDate data) {
+        BigDecimal total = jdbcTemplate.queryForObject(
+                "SELECT COALESCE(SUM(valor), 0) FROM movimento_caixa "
+                        + "WHERE tipo = 'ENTRADA' AND id_venda IS NOT NULL AND DATE(data_movimento) = :data",
+                new MapSqlParameterSource("data", JdbcTemporalValues.toDatabaseValue(data)),
+                BigDecimal.class
+        );
+        return total == null ? BigDecimal.ZERO : total;
+    }
+
     private MapSqlParameterSource toParams(MovimentoCaixa movimento) {
         Long idVenda = movimento.getVenda() == null ? null : movimento.getVenda().getIdVenda();
         Long idOrdemServico = movimento.getOrdemServico() == null ? null : movimento.getOrdemServico().getIdOrdemServico();

@@ -2,7 +2,6 @@ package com.acaogames.backend.repository;
 
 import com.acaogames.backend.model.Cliente;
 import com.acaogames.backend.model.Venda;
-import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
@@ -73,15 +72,6 @@ public class VendaRepository {
                 "DELETE FROM venda WHERE id_venda = :idVenda",
                 new MapSqlParameterSource("idVenda", idVenda)
         );
-    }
-
-    public BigDecimal sumByDate(LocalDate dataVenda) {
-        BigDecimal total = jdbcTemplate.queryForObject(
-                "SELECT COALESCE(SUM(valor_total), 0) FROM venda WHERE data_venda = :dataVenda",
-                new MapSqlParameterSource("dataVenda", JdbcTemporalValues.toDatabaseValue(dataVenda)),
-                BigDecimal.class
-        );
-        return total == null ? BigDecimal.ZERO : total;
     }
 
     private MapSqlParameterSource toParams(Venda venda) {

@@ -19,6 +19,7 @@ import com.acaogames.backend.repository.VendaRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -174,7 +175,7 @@ public class VendaService {
         movimento.setTipo("ENTRADA");
         movimento.setDescricao("Venda " + venda.getIdVenda());
         movimento.setValor(venda.getValorTotal());
-        movimento.setDataMovimento(LocalDateTime.now());
+        movimento.setDataMovimento(LocalDateTime.of(venda.getDataVenda(), LocalTime.now()));
         movimento.setFormaPagamento(venda.getFormaPagamento());
         movimento.setCategoria("VENDA");
         movimentoCaixaRepository.create(movimento);
@@ -195,9 +196,7 @@ public class VendaService {
     }
 
     private BigDecimal calcularSubtotal(ItemVendaRequest item) {
-        return item.getSubtotal() == null
-                ? item.getValorUnitario().multiply(BigDecimal.valueOf(item.getQuantidade().longValue()))
-                : item.getSubtotal();
+        return item.getValorUnitario().multiply(BigDecimal.valueOf(item.getQuantidade().longValue()));
     }
 
     private Cliente buscarClienteOpcional(Long idCliente) {
