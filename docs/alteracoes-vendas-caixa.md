@@ -48,3 +48,14 @@ Este documento registra os marcos da correcao solicitada e a fonte de verdade ad
 
 - `backend/src/main/java/com/acaogames/backend/service/RelatorioService.java`
 - `backend/src/test/java/com/acaogames/backend/SQLiteDatabaseIntegrationTest.java`
+
+## Marco 4 - comprovante de venda em via unica
+
+- A revisao confirmou uma unica implementacao de comprovante em `VendaPdfService`, baseada em `comprovante-venda.jrxml`.
+- Registro de venda na Home, historico do cliente e Caixa apontam para o mesmo endpoint `GET /api/vendas/{id}/pdf`.
+- O template de venda ja nao possuia blocos duplicados nem os textos "Via do Cliente" e "Via da Loja"; ele foi preservado para evitar alteracao visual desnecessaria.
+- Foi adicionado teste de regressao que gera o PDF repetidamente, confirma uma unica pagina para a venda de referencia e extrai o texto para garantir a ausencia dos dois rotulos de via.
+
+## Arquivos do marco 4
+
+- `backend/src/test/java/com/acaogames/backend/SQLiteDatabaseIntegrationTest.java`

@@ -1,6 +1,7 @@
 package com.acaogames.backend;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -12,6 +13,8 @@ import com.acaogames.backend.dto.RelatorioResponse;
 import com.acaogames.backend.service.RelatorioService;
 import com.acaogames.backend.service.VendaPdfService;
 import com.acaogames.backend.service.VendaService;
+import com.lowagie.text.pdf.PdfReader;
+import com.lowagie.text.pdf.parser.PdfTextExtractor;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -100,7 +103,7 @@ class SQLiteDatabaseIntegrationTest {
     }
 
     @Test
-    void deveGerarComprovanteDeVendaMaisDeUmaVez() {
+    void deveGerarComprovanteDeVendaEmViaUnicaMaisDeUmaVez() throws IOException {
         Venda venda = vendaService.buscar(2L);
 
         byte[] primeiroPdf = vendaPdfService.gerarPdf(venda);
@@ -110,6 +113,16 @@ class SQLiteDatabaseIntegrationTest {
         assertTrue(primeiroPdf.length > 0);
         assertNotNull(segundoPdf);
         assertTrue(segundoPdf.length > 0);
+
+        PdfReader reader = new PdfReader(primeiroPdf);
+        try {
+            assertEquals(1, reader.getNumberOfPages());
+            String text = new PdfTextExtractor(reader).getTextFromPage(1).toLowerCase();
+            assertFalse(text.contains("via do cliente"));
+            assertFalse(text.contains("via da loja"));
+        } finally {
+            reader.close();
+        }
     }
 
     @Test
