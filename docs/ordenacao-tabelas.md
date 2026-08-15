@@ -76,3 +76,12 @@ O teste frontend cobre:
 
 O teste de integracao do backend cobre todas as colunas do Relatorio de Produtos, whitelist de
 campos/direcoes e duas paginas ordenadas sobre o conjunto completo.
+
+Validacoes executadas nesta entrega:
+
+- 17 testes Maven aprovados, incluindo 5 do relatorio de produtos;
+- 10 cenarios do utilitario frontend aprovados;
+- build de producao Vite concluido com 53 modulos;
+- chamadas autenticadas confirmaram oito combinacoes de coluna/direcao, duas paginas globais e
+  resposta HTTP 400 para campo de ordenacao fora da whitelist;
+- a revisao visual automatizada nao foi executada porque nao havia navegador conectado a sessao.
