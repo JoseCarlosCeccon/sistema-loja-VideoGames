@@ -54,6 +54,18 @@ page=0
 size=20
 ```
 
+## Interface, CSV e impressao
+
+- A aba `Produtos` reutiliza datas, pesquisa, atualizacao, CSV, impressao e paginacao da tela de Relatorios.
+- Os filtros adicionais ficam em um painel recolhivel e alteram a mesma consulta paginada da tabela.
+- Os atalhos de 30, 60 e 90 dias selecionam `SEM_VENDAS` e atualizam o periodo geral.
+- Cards exibem as quatro metricas e a variacao contra o periodo anterior quando existe uma base diferente de zero.
+- Rankings simples mostram os cinco produtos com mais unidades e com maior faturamento.
+- A linha e o botao `Detalhes` abrem um modal com o resumo e o historico paginado das vendas do produto.
+- O CSV busca todas as paginas de produtos agregados usando exatamente os mesmos filtros e ordenacao da tela. As seis colunas comerciais sao as mesmas da tabela.
+- A impressao reutiliza `window.print()`, inclui titulo, periodo, filtros aplicados, indicadores, rankings e a pagina visivel da tabela. Controles e modal sao ocultados no documento, preservando a regra existente de uma unica impressao.
+- O filtro de status nao e exibido porque venda nao possui esse atributo no modelo atual.
+
 ## Testes automatizados do backend
 
 `ProdutoRelatorioIntegrationTest` cobre:
@@ -68,3 +80,11 @@ size=20
 - pesquisa, categoria, ordenacao e paginacao;
 - produtos ativos com estoque e sem saida;
 - detalhe e historico das vendas do produto.
+
+Validacoes executadas na aplicacao local:
+
+- os endpoints autenticados retornaram 4 unidades, 3 vendas, R$ 275,00 e 3 produtos distintos para os dados de referencia de maio de 2026;
+- o detalhe do Cabo USB-C retornou 2 vendas e 2 unidades;
+- o filtro sem vendas retornou o produto ativo com estoque esperado;
+- o build de producao do React/Vite foi concluido sem erros;
+- a revisao visual automatizada ficou indisponivel porque nao havia navegador conectado a sessao de validacao.
