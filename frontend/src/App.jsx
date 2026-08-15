@@ -1,6 +1,8 @@
 import React, { lazy, startTransition, Suspense, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { api, AUTH_REJECTED_EVENT, AUTH_STORAGE_KEY } from "./services/api";
 import LoginPage from "./pages/Login";
+import ServiceOrderStatusBadge from "./components/ServiceOrderStatusBadge";
+import UserMenu from "./components/UserMenu";
 import { formatCpf, formatPhone } from "./utils/masks";
 import currentDesignCss from "./current-design.css?raw";
 import fundoPersonagensUrl from "./assets/images/FUNDO DE PERSONAGENS.jpg";
@@ -826,18 +828,17 @@ function App() {
             type="button"
             className="header-link theme-toggle-button"
             aria-pressed={themeMode === "dark"}
+            aria-label={themeMode === "light" ? "Ativar tema escuro" : "Ativar tema claro"}
+            title={themeMode === "light" ? "Ativar tema escuro" : "Ativar tema claro"}
             onClick={() => setThemeMode((current) => (current === "light" ? "dark" : "light"))}
           >
             <span className={`theme-toggle-icon theme-toggle-icon--${themeMode === "light" ? "dark" : "light"}`} aria-hidden="true" />
-            {themeMode === "light" ? "Tema escuro" : "Tema claro"}
           </button>
-          <div className="header-user-chip">
-            <span>{authUser.nome || authUser.login}</span>
-            <small>{humanizeStatus(authUser.perfil)}</small>
-          </div>
-          <button type="button" className="header-link" onClick={handleLogout}>
-            Sair
-          </button>
+          <UserMenu
+            name={authUser.nome || authUser.login}
+            profile={humanizeStatus(authUser.perfil)}
+            onLogout={handleLogout}
+          />
         </div>
       </header>
 
@@ -958,7 +959,7 @@ function App() {
                     <th>Cliente</th>
                     <th>Equipamento</th>
                     <th>Problema</th>
-                    <th>Status</th>
+                    <th className="service-order-status-column">Status</th>
                     <th>Entrada</th>
                     <th>PDF</th>
                   </tr>
@@ -974,7 +975,7 @@ function App() {
                           {ordem.problemaRelatado || "Não informado"}
                         </span>
                       </td>
-                      <td><StatusBadge status={ordem.status} /></td>
+                      <td className="service-order-status-column"><ServiceOrderStatusBadge status={ordem.status} /></td>
                       <td>{formatDate(ordem.dataEntrada)}</td>
                       <td>
                         <button
@@ -1947,24 +1948,6 @@ function RecentSaleCard({ sale }) {
         {currencyFormatter.format(sale.valorTotal || sale.valorVenda || 0)}
       </strong>
     </article>
-  );
-}
-
-function StatusBadge({ status }) {
-  const normalized = String(status || "").toLowerCase();
-  const tone =
-    normalized.includes("pronto")
-      ? "green"
-      : normalized.includes("aprovacao") || normalized.includes("analise") || normalized.includes("manutencao")
-      ? "amber"
-      : normalized.includes("cancel")
-      ? "red"
-      : "blue";
-
-  return (
-    <span className={`status-badge status-badge--${tone}`}>
-      {humanizeStatus(status)}
-    </span>
   );
 }
 

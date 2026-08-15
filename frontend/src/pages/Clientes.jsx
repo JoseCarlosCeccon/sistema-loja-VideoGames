@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { api } from "../services/api";
 import searchIcon from "../assets/icons/search.svg";
 import { formatCpf, formatPhone } from "../utils/masks";
+import ServiceOrderStatusBadge from "../components/ServiceOrderStatusBadge";
 import SortableHeader from "../components/SortableHeader";
 import { compareText, nextSort, sortRows } from "../utils/tableSorting";
 
@@ -659,7 +660,7 @@ function ClienteRecordsModal({ cliente, records, loading, onClose }) {
                         <tr>
                           <th>OS</th>
                           <th>Equipamento</th>
-                          <th>Status</th>
+                          <th className="service-order-status-column">Status</th>
                           <th>Entrada</th>
                           <th>Valor</th>
                           <th>PDF</th>
@@ -670,10 +671,8 @@ function ClienteRecordsModal({ cliente, records, loading, onClose }) {
                           <tr key={ordem.idOrdemServico}>
                             <td>#{formatRecordNumber(ordem.idOrdemServico)}</td>
                             <td>{equipmentLabel(ordem.equipamento)}</td>
-                            <td>
-                              <span className={`status-badge status-badge--${statusTone(ordem.status)}`}>
-                                {humanizeStatus(ordem.status)}
-                              </span>
+                            <td className="service-order-status-column">
+                              <ServiceOrderStatusBadge status={ordem.status} />
                             </td>
                             <td>{formatDate(ordem.dataEntrada)}</td>
                             <td>{currencyFormatter.format(parseMoney(ordem.valorServico))}</td>
@@ -820,23 +819,6 @@ function equipmentLabel(equipamento) {
   return [equipamento.marca, equipamento.tipoEquipamento, equipamento.modelo]
     .filter(Boolean)
     .join(" - ");
-}
-
-function statusTone(status) {
-  const normalized = String(status || "").toLowerCase();
-  if (normalized.includes("pronto") || normalized.includes("entregue")) {
-    return "green";
-  }
-
-  if (normalized.includes("aprovacao") || normalized.includes("analise") || normalized.includes("manutencao")) {
-    return "amber";
-  }
-
-  if (normalized.includes("cancel")) {
-    return "red";
-  }
-
-  return "blue";
 }
 
 function humanizeStatus(status) {

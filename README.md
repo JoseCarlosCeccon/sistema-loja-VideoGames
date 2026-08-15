@@ -131,6 +131,9 @@ documentado em `docs/ordenacao-tabelas.md`.
 O refinamento visual e as fontes de dados reutilizadas pela Home estao documentados em
 `docs/home-dashboard.md`.
 
+O menu compacto de usuario e o padrao visual dos status de OS estao documentados em
+`docs/header-status-ui.md`.
+
 ## Frontend
 
 - Stack: React 18 + Vite

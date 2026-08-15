@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../services/api";
 import searchIcon from "../assets/icons/search.svg";
+import ServiceOrderStatusBadge from "../components/ServiceOrderStatusBadge";
 import SortableHeader from "../components/SortableHeader";
 import { nextSort, sortRows } from "../utils/tableSorting";
 
@@ -593,7 +594,13 @@ export default function EquipamentosPage({
                   <SortableHeader label="Cliente" sortKey="cliente" sort={orderSort} onSort={updateOrderSort} />
                   <SortableHeader label="Equipamento" sortKey="equipamento" sort={orderSort} onSort={updateOrderSort} />
                   <th>Problema</th>
-                  <SortableHeader label="Status" sortKey="status" sort={orderSort} onSort={updateOrderSort} />
+                  <SortableHeader
+                    label="Status"
+                    sortKey="status"
+                    sort={orderSort}
+                    onSort={updateOrderSort}
+                    className="service-order-status-column"
+                  />
                   <SortableHeader label="Entrada" sortKey="entrada" sort={orderSort} onSort={updateOrderSort} />
                   <SortableHeader label="Valor" sortKey="valor" sort={orderSort} onSort={updateOrderSort} />
                   <th>Acoes</th>
@@ -606,10 +613,8 @@ export default function EquipamentosPage({
                     <td>{ordem.cliente?.nome || "Cliente nao informado"}</td>
                     <td>{equipmentLabel(ordem.equipamento)}</td>
                     <td>{ordem.problemaRelatado || "Nao informado"}</td>
-                    <td>
-                      <span className={`status-badge status-badge--${statusTone(ordem.status)}`}>
-                        {humanizeStatus(ordem.status)}
-                      </span>
+                    <td className="service-order-status-column">
+                      <ServiceOrderStatusBadge status={ordem.status} />
                     </td>
                     <td>{formatDate(ordem.dataEntrada)}</td>
                     <td>{currencyFormatter.format(parseMoney(ordem.valorServico))}</td>
@@ -1261,23 +1266,6 @@ function orderSuccessMessage(mode, ordemSalva, selectedOrder) {
   }
 
   return `Entrada registrada. OS #${number} criada com sucesso.`;
-}
-
-function statusTone(status) {
-  const normalized = String(status || "").toLowerCase();
-  if (normalized.includes("pronto") || normalized.includes("entregue")) {
-    return "green";
-  }
-
-  if (normalized.includes("aprovacao") || normalized.includes("analise") || normalized.includes("manutencao")) {
-    return "amber";
-  }
-
-  if (normalized.includes("cancel")) {
-    return "red";
-  }
-
-  return "blue";
 }
 
 function statusRank(status) {

@@ -145,17 +145,47 @@ textarea:focus-visible {
   background: #eef9fb;
 }
 
-.header-user-chip {
-  border-color: var(--line);
-  background: #ffffff;
+.theme-toggle-button {
+  width: 40px;
+  min-width: 40px;
+  padding: 0;
 }
 
-.header-user-chip span {
+.user-menu__trigger {
+  border-color: var(--line);
+  background: #ffffff;
   color: var(--text);
 }
 
-.header-user-chip small {
-  color: var(--muted);
+.user-menu__trigger:hover,
+.user-menu__trigger--open {
+  border-color: rgba(15, 143, 158, 0.3);
+  background: #f3f9fb;
+}
+
+.user-menu__avatar {
+  border-color: #bddfe5;
+  background: #e8f7f9;
+  color: var(--cyan-soft);
+}
+
+.user-menu__dropdown {
+  border-color: var(--line);
+  background: #ffffff;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16);
+}
+
+.user-menu__identity {
+  border-bottom-color: var(--line);
+}
+
+.user-menu__logout {
+  color: var(--muted-strong);
+}
+
+.user-menu__logout:hover {
+  background: #fff2f2;
+  color: #a92f2f;
 }
 
 .main-content {
@@ -624,6 +654,58 @@ td:first-child {
   background: #f1f6ff;
 }
 
+.service-status-badge--received {
+  --service-status-color: #2853a6;
+  --service-status-background: #f1f6ff;
+  --service-status-border: #d3e1f8;
+}
+
+.service-status-badge > span {
+  color: inherit;
+}
+
+.service-status-badge--analysis {
+  --service-status-color: #6048a8;
+  --service-status-background: #f5f1ff;
+  --service-status-border: #ddd3f8;
+}
+
+.service-status-badge--waiting {
+  --service-status-color: #8a570c;
+  --service-status-background: #fff8e6;
+  --service-status-border: #f2dcae;
+}
+
+.service-status-badge--approved {
+  --service-status-color: #0d6b5b;
+  --service-status-background: #edf9f6;
+  --service-status-border: #bfe5dc;
+}
+
+.service-status-badge--progress {
+  --service-status-color: #0b6c82;
+  --service-status-background: #ecf9fc;
+  --service-status-border: #bde4ed;
+}
+
+.service-status-badge--ready {
+  --service-status-color: #12603d;
+  --service-status-background: #eefaf3;
+  --service-status-border: #c4e8d1;
+}
+
+.service-status-badge--delivered {
+  --service-status-color: #5d6977;
+  --service-status-background: #f4f6f8;
+  --service-status-border: #dde3e9;
+}
+
+.service-status-badge--cancelled {
+  --service-status-color: #a92f2f;
+  --service-status-background: #fff2f2;
+  --service-status-border: #efc8c8;
+}
+
 .empty-state {
   border-color: #d8e2ee;
   background: #f8fafc;
@@ -1084,7 +1166,7 @@ td:first-child {
 
 @media (max-width: 820px) {
   .app-header {
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr) auto;
     padding: 10px 14px;
   }
 

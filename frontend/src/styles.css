@@ -221,39 +221,131 @@ button:disabled {
 }
 
 .theme-toggle-button {
-  min-width: max-content;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  min-width: 36px;
+  padding: 0;
 }
 
-.header-user-chip {
-  display: grid;
-  align-content: center;
+.user-menu {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.user-menu__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   min-height: 36px;
-  padding: 0 12px;
-  border: 1px solid var(--line);
+  padding: 3px 10px 3px 4px;
+  border: 1px solid transparent;
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  transition: border-color 0.18s ease, background 0.18s ease;
 }
 
-.header-user-chip span,
-.header-user-chip small {
+.user-menu__trigger:hover,
+.user-menu__trigger--open {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.theme-toggle-button:focus-visible,
+.user-menu__trigger:focus-visible,
+.user-menu__logout:focus-visible {
+  outline: 2px solid var(--cyan-soft);
+  outline-offset: 2px;
+}
+
+.user-menu__avatar {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(112, 227, 255, 0.2);
+  border-radius: 50%;
+  background: rgba(17, 168, 199, 0.16);
+  color: var(--cyan-soft);
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+
+.user-menu__name {
   display: block;
-  max-width: 148px;
+  max-width: 160px;
   overflow: hidden;
+  font-size: 0.8rem;
+  font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.header-user-chip span {
-  color: var(--text);
-  font-size: 0.82rem;
-  font-weight: 900;
+.user-menu__chevron {
+  width: 7px;
+  height: 7px;
+  margin: -3px 2px 0 1px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  color: var(--muted);
+  transform: rotate(45deg);
 }
 
-.header-user-chip small {
-  margin-top: 1px;
+.user-menu__dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 50;
+  width: min(240px, calc(100vw - 28px));
+  padding: 7px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: #16212b;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.34);
+}
+
+.user-menu__identity {
+  display: grid;
+  gap: 3px;
+  padding: 8px 9px 11px;
+  border-bottom: 1px solid var(--line);
+}
+
+.user-menu__identity strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 0.84rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-menu__identity span {
   color: var(--muted);
-  font-size: 0.68rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.user-menu__logout {
+  width: 100%;
+  min-height: 36px;
+  margin-top: 5px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted-strong);
+  font-size: 0.8rem;
   font-weight: 800;
+  text-align: left;
+}
+
+.user-menu__logout:hover {
+  background: rgba(255, 100, 100, 0.1);
+  color: #ffb8b8;
 }
 
 .theme-toggle-icon {
@@ -997,6 +1089,88 @@ td:first-child {
 .status-badge--blue {
   color: #cce7ff;
   background: rgba(92, 168, 255, 0.16);
+}
+
+.service-order-status-column {
+  min-width: 180px;
+}
+
+.service-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--service-status-border, rgba(160, 175, 190, 0.18));
+  border-radius: 999px;
+  background: var(--service-status-background, rgba(160, 175, 190, 0.1));
+  color: var(--service-status-color, #d4dce4);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.service-status-badge > span {
+  color: inherit;
+}
+
+.service-status-badge__dot {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 14%, transparent);
+}
+
+.service-status-badge--received {
+  --service-status-color: #a8ceff;
+  --service-status-background: rgba(70, 137, 224, 0.13);
+  --service-status-border: rgba(100, 165, 250, 0.2);
+}
+
+.service-status-badge--analysis {
+  --service-status-color: #c8bcff;
+  --service-status-background: rgba(132, 105, 220, 0.13);
+  --service-status-border: rgba(165, 140, 240, 0.2);
+}
+
+.service-status-badge--waiting {
+  --service-status-color: #ffe0a3;
+  --service-status-background: rgba(241, 184, 74, 0.13);
+  --service-status-border: rgba(241, 184, 74, 0.2);
+}
+
+.service-status-badge--approved {
+  --service-status-color: #8fe1d1;
+  --service-status-background: rgba(48, 180, 155, 0.13);
+  --service-status-border: rgba(72, 205, 180, 0.2);
+}
+
+.service-status-badge--progress {
+  --service-status-color: #8fe3ff;
+  --service-status-background: rgba(17, 168, 199, 0.14);
+  --service-status-border: rgba(75, 205, 230, 0.2);
+}
+
+.service-status-badge--ready {
+  --service-status-color: #a7efc3;
+  --service-status-background: rgba(72, 216, 137, 0.13);
+  --service-status-border: rgba(72, 216, 137, 0.2);
+}
+
+.service-status-badge--delivered {
+  --service-status-color: #c1cad3;
+  --service-status-background: rgba(148, 163, 184, 0.1);
+  --service-status-border: rgba(148, 163, 184, 0.16);
+}
+
+.service-status-badge--cancelled {
+  --service-status-color: #ffb7b7;
+  --service-status-background: rgba(255, 100, 100, 0.11);
+  --service-status-border: rgba(255, 120, 120, 0.18);
 }
 
 .sales-list {
@@ -2494,12 +2668,12 @@ td:first-child {
 
 @media (max-width: 1240px) {
   .app-header {
-    grid-template-columns: auto 1fr;
+    grid-template-columns: auto minmax(0, 1fr) auto;
   }
 
   .header-actions {
-    grid-column: 1 / -1;
-    justify-content: flex-start;
+    grid-column: auto;
+    justify-content: flex-end;
   }
 
   .metric-grid {
@@ -2560,6 +2734,7 @@ td:first-child {
 
 @media (max-width: 820px) {
   .app-header {
+    grid-template-columns: auto minmax(0, 1fr) auto;
     gap: 12px;
     padding: 8px 14px;
   }
@@ -2576,6 +2751,24 @@ td:first-child {
   }
 
   .header-link {
+    display: none;
+  }
+
+  .header-actions {
+    grid-column: 3;
+  }
+
+  .theme-toggle-button {
+    display: inline-flex;
+  }
+
+  .user-menu__trigger {
+    width: 36px;
+    padding: 3px;
+  }
+
+  .user-menu__name,
+  .user-menu__chevron {
     display: none;
   }
 
