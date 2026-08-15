@@ -107,6 +107,8 @@ GET /api/relatorios/vendas
 GET /api/relatorios/ordens
 GET /api/relatorios/estoque
 GET /api/relatorios/clientes
+GET /api/relatorios/produtos
+GET /api/relatorios/produtos/{idProduto}/vendas
 ```
 
 Os relatorios aceitam:
@@ -118,6 +120,10 @@ busca=texto
 page=0
 size=20
 ```
+
+O relatorio de produtos tambem aceita filtros de produto, categoria, movimentacao e ordenacao.
+As regras de agregacao, comparacao e a limitacao de custo historico estao documentadas em
+`docs/relatorio-produtos.md`.
 
 ## Frontend
 

@@ -2,8 +2,12 @@ package com.acaogames.backend.service;
 
 import com.acaogames.backend.dto.RelatorioResponse;
 import com.acaogames.backend.dto.RelatorioResponse.Column;
+import com.acaogames.backend.exception.BadRequestException;
+import com.acaogames.backend.exception.ResourceNotFoundException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -255,6 +259,332 @@ public class RelatorioService {
         response.setRows(jdbcTemplate.queryForList(rowsSql, params));
         response.setSummary(jdbcTemplate.queryForMap(summarySql, params));
         return response;
+    }
+
+    public RelatorioResponse produtos(
+            LocalDate inicio,
+            LocalDate fim,
+            String busca,
+            Long idProduto,
+            String categoria,
+            String movimentacao,
+            String ordenarPor,
+            int page,
+            int size
+    ) {
+        validarPeriodo(inicio, fim);
+        PageRequest pageRequest = normalizePage(page, size);
+        String movimentoNormalizado = normalizarMovimentacao(movimentacao);
+        String ordenacaoNormalizada = normalizarOrdenacao(ordenarPor);
+        MapSqlParameterSource params = produtoParams(
+                inicio, fim, busca, idProduto, categoria, movimentoNormalizado, pageRequest
+        );
+        String cte = produtoCte();
+        String orderBy = produtoOrderBy(ordenacaoNormalizada);
+
+        Number total = jdbcTemplate.queryForObject(
+                cte + " SELECT COUNT(*) FROM produtos_filtrados",
+                params,
+                Number.class
+        );
+        RelatorioResponse response = buildResponse(
+                "produtos",
+                pageRequest,
+                total == null ? 0L : total.longValue()
+        );
+        response.setColumns(Arrays.asList(
+                column("produto", "Produto", "text"),
+                column("categoria", "Categoria", "text"),
+                column("unidadesVendidas", "Unidades Vendidas", "number"),
+                column("numeroVendas", "Nº de Vendas", "number"),
+                column("precoMedio", "Preço Médio", "money"),
+                column("faturamento", "Faturamento", "money")
+        ));
+        response.setRows(jdbcTemplate.queryForList(
+                cte
+                        + " SELECT id_produto AS \"id\", produto AS \"produto\", categoria AS \"categoria\", "
+                        + "unidades_vendidas AS \"unidadesVendidas\", numero_vendas AS \"numeroVendas\", "
+                        + "preco_medio AS \"precoMedio\", faturamento AS \"faturamento\", "
+                        + "estoque_atual AS \"estoqueAtual\", ultima_venda AS \"ultimaVenda\" "
+                        + "FROM produtos_filtrados ORDER BY " + orderBy + " LIMIT :limit OFFSET :offset",
+                params
+        ));
+
+        Map<String, Object> resumoAtual = produtoResumo(params);
+        response.setSummary(resumoAtual);
+        response.setRankings(produtoRankings(cte, params));
+
+        if (inicio != null && fim != null) {
+            long quantidadeDias = ChronoUnit.DAYS.between(inicio, fim) + 1L;
+            LocalDate fimAnterior = inicio.minusDays(1L);
+            LocalDate inicioAnterior = fimAnterior.minusDays(quantidadeDias - 1L);
+            MapSqlParameterSource paramsAnteriores = produtoParams(
+                    inicioAnterior,
+                    fimAnterior,
+                    busca,
+                    idProduto,
+                    categoria,
+                    movimentoNormalizado,
+                    new PageRequest(0, 1)
+            );
+            response.setComparison(compararResumos(
+                    resumoAtual,
+                    produtoResumo(paramsAnteriores),
+                    inicioAnterior,
+                    fimAnterior
+            ));
+        }
+        return response;
+    }
+
+    public RelatorioResponse produtoVendas(
+            Long idProduto,
+            LocalDate inicio,
+            LocalDate fim,
+            int page,
+            int size
+    ) {
+        validarPeriodo(inicio, fim);
+        PageRequest pageRequest = normalizePage(page, size);
+        MapSqlParameterSource params = baseParams(inicio, fim, "", pageRequest)
+                .addValue("idProduto", idProduto);
+        List<Map<String, Object>> produtos = jdbcTemplate.queryForList(
+                "SELECT id_produto AS \"id\", nome AS \"produto\", categoria AS \"categoria\", "
+                        + "quantidade_estoque AS \"estoqueAtual\" FROM produto WHERE id_produto = :idProduto",
+                params
+        );
+        if (produtos.isEmpty()) {
+            throw new ResourceNotFoundException("Produto nao encontrado.");
+        }
+
+        String where = " WHERE iv.id_produto = :idProduto "
+                + "AND (:inicio IS NULL OR v.data_venda >= :inicio) "
+                + "AND (:fim IS NULL OR v.data_venda <= :fim) "
+                + "AND EXISTS (SELECT 1 FROM movimento_caixa mc "
+                + "WHERE mc.id_venda = v.id_venda AND mc.tipo = 'ENTRADA') ";
+        String from = "item_venda iv INNER JOIN venda v ON v.id_venda = iv.id_venda "
+                + "LEFT JOIN cliente c ON c.id_cliente = v.id_cliente ";
+        Number total = jdbcTemplate.queryForObject(
+                "SELECT COUNT(DISTINCT v.id_venda) FROM " + from + where,
+                params,
+                Number.class
+        );
+        RelatorioResponse response = buildResponse(
+                "produto-vendas",
+                pageRequest,
+                total == null ? 0L : total.longValue()
+        );
+        response.setColumns(Arrays.asList(
+                column("id", "Venda", "number"),
+                column("data", "Data", "date"),
+                column("cliente", "Cliente", "text"),
+                column("quantidade", "Quantidade", "number"),
+                column("precoUnitario", "Preço Unitário", "money"),
+                column("total", "Total", "money")
+        ));
+        response.setRows(jdbcTemplate.queryForList(
+                "SELECT v.id_venda AS \"id\", v.data_venda AS \"data\", "
+                        + "COALESCE(c.nome, 'Venda balcao') AS \"cliente\", "
+                        + "SUM(iv.quantidade) AS \"quantidade\", "
+                        + "CASE WHEN SUM(iv.quantidade) = 0 THEN 0 "
+                        + "ELSE SUM(iv.subtotal) / SUM(iv.quantidade) END AS \"precoUnitario\", "
+                        + "SUM(iv.subtotal) AS \"total\" FROM " + from + where
+                        + "GROUP BY v.id_venda, v.data_venda, c.nome "
+                        + "ORDER BY v.data_venda DESC, v.id_venda DESC LIMIT :limit OFFSET :offset",
+                params
+        ));
+
+        Map<String, Object> summary = new LinkedHashMap<String, Object>(produtos.get(0));
+        summary.putAll(jdbcTemplate.queryForMap(
+                "SELECT COALESCE(SUM(iv.quantidade), 0) AS \"unidadesVendidas\", "
+                        + "COUNT(DISTINCT v.id_venda) AS \"vendasRealizadas\", "
+                        + "COALESCE(SUM(iv.subtotal), 0) AS \"faturamento\", "
+                        + "CASE WHEN COALESCE(SUM(iv.quantidade), 0) = 0 THEN 0 "
+                        + "ELSE SUM(iv.subtotal) / SUM(iv.quantidade) END AS \"precoMedio\", "
+                        + "MAX(v.data_venda) AS \"ultimaVenda\" FROM " + from + where,
+                params
+        ));
+        response.setSummary(summary);
+        return response;
+    }
+
+    private String produtoCte() {
+        return "WITH desempenho AS ("
+                + "SELECT iv.id_produto, SUM(iv.quantidade) AS unidades_vendidas, "
+                + "COUNT(DISTINCT iv.id_venda) AS numero_vendas, "
+                + "SUM(iv.subtotal) AS faturamento, MAX(v.data_venda) AS ultima_venda "
+                + "FROM item_venda iv INNER JOIN venda v ON v.id_venda = iv.id_venda "
+                + "WHERE (:inicio IS NULL OR v.data_venda >= :inicio) "
+                + "AND (:fim IS NULL OR v.data_venda <= :fim) "
+                + "AND EXISTS (SELECT 1 FROM movimento_caixa mc "
+                + "WHERE mc.id_venda = v.id_venda AND mc.tipo = 'ENTRADA') "
+                + "GROUP BY iv.id_produto), "
+                + "produtos_filtrados AS ("
+                + "SELECT p.id_produto, p.nome AS produto, p.categoria, p.quantidade_estoque AS estoque_atual, "
+                + "COALESCE(d.unidades_vendidas, 0) AS unidades_vendidas, "
+                + "COALESCE(d.numero_vendas, 0) AS numero_vendas, "
+                + "CASE WHEN COALESCE(d.unidades_vendidas, 0) = 0 THEN 0 "
+                + "ELSE d.faturamento / d.unidades_vendidas END AS preco_medio, "
+                + "COALESCE(d.faturamento, 0) AS faturamento, d.ultima_venda "
+                + "FROM produto p LEFT JOIN desempenho d ON d.id_produto = p.id_produto "
+                + "WHERE (:busca = '' OR LOWER(p.nome) LIKE :buscaLike "
+                + "OR LOWER(p.categoria) LIKE :buscaLike "
+                + "OR LOWER(COALESCE(p.descricao, '')) LIKE :buscaLike "
+                + "OR CAST(p.id_produto AS TEXT) LIKE :buscaLike) "
+                + "AND (:idProduto IS NULL OR p.id_produto = :idProduto) "
+                + "AND (:categoria = '' OR LOWER(p.categoria) = :categoria) "
+                + "AND (:movimentacao = 'TODOS' "
+                + "OR (:movimentacao = 'COM_VENDAS' AND COALESCE(d.unidades_vendidas, 0) > 0) "
+                + "OR (:movimentacao = 'SEM_VENDAS' AND p.ativo = 1 AND p.quantidade_estoque > 0 "
+                + "AND COALESCE(d.unidades_vendidas, 0) = 0))) ";
+    }
+
+    private Map<String, Object> produtoResumo(MapSqlParameterSource params) {
+        String sql = produtoCte()
+                + "SELECT COALESCE(SUM(pf.unidades_vendidas), 0) AS \"unidadesVendidas\", "
+                + "(SELECT COUNT(DISTINCT iv.id_venda) FROM item_venda iv "
+                + "INNER JOIN venda v ON v.id_venda = iv.id_venda "
+                + "INNER JOIN produtos_filtrados pfx ON pfx.id_produto = iv.id_produto "
+                + "WHERE (:inicio IS NULL OR v.data_venda >= :inicio) "
+                + "AND (:fim IS NULL OR v.data_venda <= :fim) "
+                + "AND EXISTS (SELECT 1 FROM movimento_caixa mc "
+                + "WHERE mc.id_venda = v.id_venda AND mc.tipo = 'ENTRADA')) AS \"vendasRealizadas\", "
+                + "COALESCE(SUM(pf.faturamento), 0) AS \"faturamentoProdutos\", "
+                + "COALESCE(SUM(CASE WHEN pf.unidades_vendidas > 0 THEN 1 ELSE 0 END), 0) "
+                + "AS \"produtosDiferentes\" FROM produtos_filtrados pf";
+        return jdbcTemplate.queryForMap(sql, params);
+    }
+
+    private Map<String, List<Map<String, Object>>> produtoRankings(
+            String cte,
+            MapSqlParameterSource params
+    ) {
+        Map<String, List<Map<String, Object>>> rankings =
+                new LinkedHashMap<String, List<Map<String, Object>>>();
+        rankings.put("maisVendidos", jdbcTemplate.queryForList(
+                cte + " SELECT id_produto AS \"id\", produto AS \"produto\", "
+                        + "unidades_vendidas AS \"valor\" FROM produtos_filtrados "
+                        + "WHERE unidades_vendidas > 0 "
+                        + "ORDER BY unidades_vendidas DESC, produto ASC LIMIT 5",
+                params
+        ));
+        rankings.put("maiorFaturamento", jdbcTemplate.queryForList(
+                cte + " SELECT id_produto AS \"id\", produto AS \"produto\", "
+                        + "faturamento AS \"valor\" FROM produtos_filtrados "
+                        + "WHERE faturamento > 0 "
+                        + "ORDER BY faturamento DESC, produto ASC LIMIT 5",
+                params
+        ));
+        return rankings;
+    }
+
+    private Map<String, Object> compararResumos(
+            Map<String, Object> atual,
+            Map<String, Object> anterior,
+            LocalDate inicioAnterior,
+            LocalDate fimAnterior
+    ) {
+        Map<String, Object> comparison = new LinkedHashMap<String, Object>();
+        comparison.put("inicioAnterior", inicioAnterior.toString());
+        comparison.put("fimAnterior", fimAnterior.toString());
+        for (String metrica : Arrays.asList(
+                "unidadesVendidas",
+                "vendasRealizadas",
+                "faturamentoProdutos",
+                "produtosDiferentes"
+        )) {
+            BigDecimal valorAtual = decimal(atual.get(metrica));
+            BigDecimal valorAnterior = decimal(anterior.get(metrica));
+            Map<String, Object> comparacao = new LinkedHashMap<String, Object>();
+            comparacao.put("valorAnterior", valorAnterior);
+            if (valorAnterior.compareTo(BigDecimal.ZERO) == 0) {
+                comparacao.put("disponivel", false);
+            } else {
+                BigDecimal percentual = valorAtual.subtract(valorAnterior)
+                        .divide(valorAnterior.abs(), 6, RoundingMode.HALF_UP)
+                        .multiply(new BigDecimal("100"))
+                        .setScale(1, RoundingMode.HALF_UP);
+                comparacao.put("disponivel", true);
+                comparacao.put("percentual", percentual);
+                comparacao.put("direcao", percentual.signum() > 0 ? "UP" : percentual.signum() < 0 ? "DOWN" : "SAME");
+            }
+            comparison.put(metrica, comparacao);
+        }
+        return comparison;
+    }
+
+    private MapSqlParameterSource produtoParams(
+            LocalDate inicio,
+            LocalDate fim,
+            String busca,
+            Long idProduto,
+            String categoria,
+            String movimentacao,
+            PageRequest pageRequest
+    ) {
+        return baseParams(inicio, fim, busca, pageRequest)
+                .addValue("idProduto", idProduto)
+                .addValue("categoria", categoria == null ? "" : categoria.trim().toLowerCase())
+                .addValue("movimentacao", movimentacao);
+    }
+
+    private String normalizarMovimentacao(String movimentacao) {
+        String value = movimentacao == null ? "TODOS" : movimentacao.trim().toUpperCase();
+        if (!Arrays.asList("TODOS", "COM_VENDAS", "SEM_VENDAS").contains(value)) {
+            throw new BadRequestException("Filtro de movimentacao invalido.");
+        }
+        return value;
+    }
+
+    private String normalizarOrdenacao(String ordenarPor) {
+        String value = ordenarPor == null ? "MAIS_UNIDADES" : ordenarPor.trim().toUpperCase();
+        if (!Arrays.asList(
+                "MAIS_UNIDADES",
+                "MAIS_VENDAS",
+                "MAIOR_FATURAMENTO",
+                "MENOR_FATURAMENTO",
+                "MENOS_UNIDADES",
+                "NOME_ASC",
+                "NOME_DESC"
+        ).contains(value)) {
+            throw new BadRequestException("Ordenacao de produtos invalida.");
+        }
+        return value;
+    }
+
+    private String produtoOrderBy(String ordenacao) {
+        if ("MAIS_VENDAS".equals(ordenacao)) {
+            return "numero_vendas DESC, unidades_vendidas DESC, produto ASC";
+        }
+        if ("MAIOR_FATURAMENTO".equals(ordenacao)) {
+            return "faturamento DESC, unidades_vendidas DESC, produto ASC";
+        }
+        if ("MENOR_FATURAMENTO".equals(ordenacao)) {
+            return "faturamento ASC, produto ASC";
+        }
+        if ("MENOS_UNIDADES".equals(ordenacao)) {
+            return "unidades_vendidas ASC, produto ASC";
+        }
+        if ("NOME_ASC".equals(ordenacao)) {
+            return "produto ASC";
+        }
+        if ("NOME_DESC".equals(ordenacao)) {
+            return "produto DESC";
+        }
+        return "unidades_vendidas DESC, numero_vendas DESC, produto ASC";
+    }
+
+    private void validarPeriodo(LocalDate inicio, LocalDate fim) {
+        if (inicio != null && fim != null && inicio.isAfter(fim)) {
+            throw new BadRequestException("A data inicial nao pode ser posterior a data final.");
+        }
+    }
+
+    private BigDecimal decimal(Object value) {
+        if (value == null) {
+            return BigDecimal.ZERO;
+        }
+        return new BigDecimal(value.toString());
     }
 
     private Map<String, Object> movimentacoesEstoqueResumo(LocalDate inicio, LocalDate fim, String busca) {

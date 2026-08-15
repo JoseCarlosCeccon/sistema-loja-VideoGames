@@ -73,4 +73,32 @@ public class RelatorioController {
     ) {
         return relatorioService.clientes(inicio, fim, busca, page, size);
     }
+
+    @GetMapping("/produtos")
+    public RelatorioResponse produtos(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fim,
+            @RequestParam(defaultValue = "") String busca,
+            @RequestParam(required = false) Long idProduto,
+            @RequestParam(defaultValue = "") String categoria,
+            @RequestParam(defaultValue = "TODOS") String movimentacao,
+            @RequestParam(defaultValue = "MAIS_UNIDADES") String ordenarPor,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return relatorioService.produtos(
+                inicio, fim, busca, idProduto, categoria, movimentacao, ordenarPor, page, size
+        );
+    }
+
+    @GetMapping("/produtos/{idProduto}/vendas")
+    public RelatorioResponse produtoVendas(
+            @org.springframework.web.bind.annotation.PathVariable Long idProduto,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fim,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return relatorioService.produtoVendas(idProduto, inicio, fim, page, size);
+    }
 }

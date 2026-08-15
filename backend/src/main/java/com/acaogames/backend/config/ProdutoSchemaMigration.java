@@ -48,6 +48,10 @@ public class ProdutoSchemaMigration {
         } else {
             jdbcTemplate.execute("UPDATE produto SET valor_venda_prazo = COALESCE(valor_venda_prazo, valor_venda_vista, valor_venda, 0)");
         }
+
+        jdbcTemplate.execute("CREATE INDEX IF NOT EXISTS idx_item_venda_venda ON item_venda(id_venda)");
+        jdbcTemplate.execute("CREATE INDEX IF NOT EXISTS idx_item_venda_produto ON item_venda(id_produto)");
+        jdbcTemplate.execute("CREATE INDEX IF NOT EXISTS idx_caixa_venda_tipo ON movimento_caixa(id_venda, tipo)");
     }
 
     private void initializeDatabase() {
