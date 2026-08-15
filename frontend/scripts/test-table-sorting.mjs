@@ -72,4 +72,47 @@ assert.deepEqual(nextSort({ sortBy: "cliente", sortOrder: "asc" }, "cliente"), {
 assert.deepEqual(nextSort({ sortBy: "cliente", sortOrder: "desc" }, "cliente"), { sortBy: "cliente", sortOrder: "asc" });
 assert.deepEqual(nextSort({ sortBy: "cliente", sortOrder: "desc" }, "entrada"), { sortBy: "entrada", sortOrder: "asc" });
 
-console.log("Ordenacao de tabelas: 10 cenarios aprovados.");
+const stockRows = [
+  { idProduto: 1, nome: "Cabo HDMI", categoria: "Cabos", descricao: "Cabo 2 metros", quantidade: "10", minimo: "2", compra: 90, vista: 100, prazo: 120, ativo: true },
+  { idProduto: 2, nome: "Controle", categoria: "Controles", descricao: "Sem fio", quantidade: "2", minimo: "10", compra: 1000, vista: 1200, prazo: 1500, ativo: false },
+  { idProduto: 3, nome: "Adaptador", categoria: "Cabos", descricao: "Adaptador de vídeo", quantidade: "20", minimo: "5", compra: 9, vista: 20, prazo: 30, ativo: true },
+  { idProduto: 4, nome: "Fonte", categoria: "Fontes", descricao: "Fonte bivolt", quantidade: "5", minimo: "20", compra: 100, vista: 200, prazo: 250, ativo: false }
+];
+const stockColumns = {
+  produto: { value: (row) => row.nome, type: "text" },
+  categoria: { value: (row) => row.categoria, type: "text" },
+  quantidade: { value: (row) => row.quantidade, type: "number" },
+  minimo: { value: (row) => row.minimo, type: "number" },
+  compra: { value: (row) => row.compra, type: "number" },
+  vista: { value: (row) => row.vista, type: "number" },
+  prazo: { value: (row) => row.prazo, type: "number" },
+  status: { value: (row) => (row.ativo ? 1 : 0), type: "status" }
+};
+const stockTieBreaker = (left, right) => compareText(left.nome, right.nome) || left.idProduto - right.idProduto;
+
+function stockIds(sortBy, sortOrder, rows = stockRows) {
+  return sortRows(rows, { sortBy, sortOrder }, stockColumns, stockTieBreaker).map((row) => row.idProduto);
+}
+
+assert.deepEqual(stockIds("produto", "asc"), [3, 1, 2, 4], "Produto deve ordenar de A-Z");
+assert.deepEqual(stockIds("produto", "desc"), [4, 2, 1, 3], "Produto deve ordenar de Z-A");
+assert.deepEqual(stockIds("categoria", "asc"), [3, 1, 2, 4], "Categoria deve usar ordem textual");
+assert.deepEqual(stockIds("categoria", "desc"), [4, 2, 3, 1], "Categoria deve inverter a ordem textual");
+assert.deepEqual(stockIds("quantidade", "asc"), [2, 4, 1, 3], "Quantidade deve usar comparacao numerica");
+assert.deepEqual(stockIds("quantidade", "desc"), [3, 1, 4, 2], "Quantidade deve inverter a comparacao numerica");
+assert.deepEqual(stockIds("minimo", "asc"), [1, 3, 2, 4], "Estoque minimo deve usar comparacao numerica");
+assert.deepEqual(stockIds("minimo", "desc"), [4, 2, 3, 1], "Estoque minimo deve inverter a comparacao numerica");
+assert.deepEqual(stockIds("compra", "asc"), [3, 1, 4, 2], "Compra deve usar o valor monetario real");
+assert.deepEqual(stockIds("compra", "desc"), [2, 4, 1, 3], "Compra deve inverter o valor monetario real");
+assert.deepEqual(stockIds("vista", "asc"), [3, 1, 4, 2], "Preco a vista deve usar o valor monetario real");
+assert.deepEqual(stockIds("vista", "desc"), [2, 4, 1, 3], "Preco a vista deve usar o valor monetario real");
+assert.deepEqual(stockIds("prazo", "asc"), [3, 1, 4, 2], "Preco a prazo deve usar o valor monetario real");
+assert.deepEqual(stockIds("prazo", "desc"), [2, 4, 1, 3], "Preco a prazo deve inverter o valor monetario real");
+assert.deepEqual(stockIds("status", "asc"), [2, 4, 3, 1], "Status deve agrupar Inativo antes de Ativo na ordem crescente");
+assert.deepEqual(stockIds("status", "desc"), [3, 1, 2, 4], "Status deve agrupar Ativo antes de Inativo na ordem decrescente");
+
+const stockSearch = stockRows.filter((row) => [row.nome, row.categoria, row.descricao]
+  .some((value) => String(value).toLocaleLowerCase("pt-BR").includes("cabo")));
+assert.deepEqual(stockIds("quantidade", "desc", stockSearch), [3, 1], "Pesquisa deve ocorrer antes da ordenacao do estoque");
+
+console.log("Ordenacao de tabelas: cenarios gerais e de estoque aprovados.");

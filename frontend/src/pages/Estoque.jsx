@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../services/api";
 import searchIcon from "../assets/icons/search.svg";
+import SortableHeader from "../components/SortableHeader";
+import { compareText, nextSort, sortRows } from "../utils/tableSorting";
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -10,6 +12,17 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
 const defaultCategories = ["Produto", "Acessorio", "Peca", "Insumo", "Servico"];
 const MAX_PRODUCT_PHOTO_BYTES = 512000;
 const allowedProductPhotoTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+
+const stockSortColumns = {
+  produto: { value: (produto) => produto.nome, type: "text" },
+  categoria: { value: (produto) => produto.categoria, type: "text" },
+  quantidade: { value: (produto) => produto.quantidadeEstoque, type: "number" },
+  minimo: { value: (produto) => produto.estoqueMinimo, type: "number" },
+  compra: { value: (produto) => parseMoney(produto.valorCompra), type: "number" },
+  vista: { value: (produto) => productCashPrice(produto), type: "number" },
+  prazo: { value: (produto) => productTermPrice(produto), type: "number" },
+  status: { value: (produto) => (produto.ativo ? 1 : 0), type: "status" }
+};
 
 function createEmptyProductForm() {
   return {
@@ -84,6 +97,7 @@ function filterProducts(produtos, search) {
 
 export default function EstoquePage({ produtos, onProdutosChange, onFeedback }) {
   const [search, setSearch] = useState("");
+  const [stockSort, setStockSort] = useState({ sortBy: "produto", sortOrder: "asc" });
   const [loading, setLoading] = useState(false);
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [productDetailsOpen, setProductDetailsOpen] = useState(false);
@@ -91,7 +105,12 @@ export default function EstoquePage({ produtos, onProdutosChange, onFeedback }) 
   const [productForm, setProductForm] = useState(createEmptyProductForm);
   const [savingProduct, setSavingProduct] = useState(false);
 
-  const filteredProducts = filterProducts(produtos, search);
+  const filteredProducts = sortRows(
+    filterProducts(produtos, search),
+    stockSort,
+    stockSortColumns,
+    (left, right) => compareText(left.nome, right.nome) || Number(left.idProduto || 0) - Number(right.idProduto || 0)
+  );
   const activeProducts = produtos.filter((produto) => produto.ativo).length;
   const lowStockProducts = produtos.filter((produto) => isLowStock(produto)).length;
   const totalStockValue = produtos.reduce((total, produto) => {
@@ -106,6 +125,10 @@ export default function EstoquePage({ produtos, onProdutosChange, onFeedback }) 
     if (onFeedback) {
       onFeedback(feedback);
     }
+  }
+
+  function updateStockSort(sortBy) {
+    setStockSort((current) => nextSort(current, sortBy));
   }
 
   async function refreshProducts(options = {}) {
@@ -376,14 +399,14 @@ export default function EstoquePage({ produtos, onProdutosChange, onFeedback }) 
             <table className="compact-table clients-table">
               <thead>
                 <tr>
-                  <th>Produto</th>
-                  <th>Categoria</th>
-                  <th>Qtd</th>
-                  <th>Minimo</th>
-                  <th>Compra</th>
-                  <th>A vista</th>
-                  <th>A prazo</th>
-                  <th>Status</th>
+                  <SortableHeader label="Produto" sortKey="produto" sort={stockSort} onSort={updateStockSort} />
+                  <SortableHeader label="Categoria" sortKey="categoria" sort={stockSort} onSort={updateStockSort} />
+                  <SortableHeader label="Qtd" sortKey="quantidade" sort={stockSort} onSort={updateStockSort} />
+                  <SortableHeader label="Mínimo" sortKey="minimo" sort={stockSort} onSort={updateStockSort} />
+                  <SortableHeader label="Compra" sortKey="compra" sort={stockSort} onSort={updateStockSort} />
+                  <SortableHeader label="À vista" sortKey="vista" sort={stockSort} onSort={updateStockSort} />
+                  <SortableHeader label="À prazo" sortKey="prazo" sort={stockSort} onSort={updateStockSort} />
+                  <SortableHeader label="Status" sortKey="status" sort={stockSort} onSort={updateStockSort} />
                   <th>Acoes</th>
                 </tr>
               </thead>

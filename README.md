@@ -125,7 +125,7 @@ O relatorio de produtos tambem aceita filtros de produto, categoria, movimentaca
 As regras de agregacao, comparacao e a limitacao de custo historico estao documentadas em
 `docs/relatorio-produtos.md`.
 
-O padrao de ordenacao por cabecalho aplicado a Produtos, Ordens de Servico e Clientes esta
+O padrao de ordenacao por cabecalho aplicado a Produtos, Ordens de Servico, Clientes e Estoque esta
 documentado em `docs/ordenacao-tabelas.md`.
 
 ## Frontend

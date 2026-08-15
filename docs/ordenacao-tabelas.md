@@ -2,7 +2,7 @@
 
 ## Experiencia compartilhada
 
-As tabelas de Relatorio de Produtos, Ordens de Servico e Clientes usam o componente
+As tabelas de Relatorio de Produtos, Ordens de Servico, Clientes e Estoque usam o componente
 `SortableHeader`. O cabecalho e um botao acessivel por teclado e apresenta:
 
 - `↕` quando a coluna esta disponivel;
@@ -55,6 +55,21 @@ ordenacao. Campos ordenaveis: nome, status Ativo/Inativo e data de cadastro. Tel
 Acoes nao sao ordenaveis. O estado inicial permanece nome crescente; nome e identificador sao os
 desempates.
 
+## Estoque
+
+A API fornece a lista completa de produtos e a tela nao possui paginacao. A pesquisa por produto,
+categoria ou descricao e aplicada sobre o conjunto completo; em seguida o resultado e ordenado e
+renderizado. Assim, a ordenacao nao fica limitada a uma pagina ou subconjunto visivel.
+
+Campos ordenaveis: produto, categoria, quantidade, estoque minimo, compra, preco a vista, preco a
+prazo e status. Acoes nao e ordenavel. Quantidade e minimo usam comparacao numerica. Compra, a
+vista e a prazo usam os valores numericos crus, nunca o texto formatado em reais.
+
+O status cadastral existente e somente Ativo/Inativo. Na ordem crescente, Inativo vem antes de
+Ativo; na decrescente, Ativo vem antes de Inativo. O aviso de estoque `Baixo` e uma condicao
+calculada e nao cria um novo status para a ordenacao. O estado inicial preserva Produto A-Z, com
+nome e identificador como desempates. Nenhum endpoint foi criado ou alterado.
+
 ## Codigo reutilizado
 
 - `frontend/src/components/SortableHeader.jsx`: indicador, clique, foco e atributos ARIA.
@@ -73,6 +88,8 @@ O teste frontend cobre:
 - filtro antes da ordenacao;
 - ordenacao global antes do recorte de uma pagina;
 - ciclo crescente/decrescente.
+- todas as oito colunas ordenaveis do Estoque nas duas direcoes;
+- pesquisa do Estoque antes da ordenacao numerica.
 
 O teste de integracao do backend cobre todas as colunas do Relatorio de Produtos, whitelist de
 campos/direcoes e duas paginas ordenadas sobre o conjunto completo.
@@ -80,7 +97,7 @@ campos/direcoes e duas paginas ordenadas sobre o conjunto completo.
 Validacoes executadas nesta entrega:
 
 - 17 testes Maven aprovados, incluindo 5 do relatorio de produtos;
-- 10 cenarios do utilitario frontend aprovados;
+- cenarios gerais e especificos do Estoque no utilitario frontend aprovados;
 - build de producao Vite concluido com 53 modulos;
 - chamadas autenticadas confirmaram oito combinacoes de coluna/direcao, duas paginas globais e
   resposta HTTP 400 para campo de ordenacao fora da whitelist;
