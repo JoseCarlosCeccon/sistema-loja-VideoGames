@@ -33,41 +33,41 @@
     <parameter name="OBSERVACOES" class="java.lang.String"/>
 
     <title>
-        <band height="798" splitType="Prevent">
+        <band height="401" splitType="Prevent">
             
 
             <!-- VIA DO CLIENTE -->
             <rectangle>
-                <reportElement x="0" y="397" width="515" height="42" backcolor="#101820"/>
+                <reportElement x="0" y="0" width="515" height="42" backcolor="#101820"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <rectangle>
-                <reportElement x="0" y="438" width="515" height="2" backcolor="#11A8C7"/>
+                <reportElement x="0" y="41" width="515" height="2" backcolor="#11A8C7"/>
                 <graphicElement><pen lineWidth="0"/></graphicElement>
             </rectangle>
             <textField>
-                <reportElement x="12" y="399" width="180" height="30" forecolor="#FFFFFF"/>
+                <reportElement x="12" y="2" width="180" height="30" forecolor="#FFFFFF"/>
                 <textElement><font fontName="SansSerif" size="18" isBold="true"/></textElement>
                 <textFieldExpression><![CDATA["Ação Games"]]></textFieldExpression>
             </textField>
             <staticText>
-                <reportElement x="13" y="424" width="170" height="11" forecolor="#D9E1EA"/>
+                <reportElement x="13" y="27" width="170" height="11" forecolor="#D9E1EA"/>
                 <textElement><font fontName="SansSerif" size="7"/></textElement>
                 <text><![CDATA[Ordem de Serviço • VIA DO CLIENTE]]></text>
             </staticText>
             <textField>
-                <reportElement x="300" y="402" width="202" height="16" forecolor="#FFFFFF"/>
+                <reportElement x="300" y="5" width="202" height="16" forecolor="#FFFFFF"/>
                 <textElement textAlignment="Right"><font fontName="SansSerif" size="12" isBold="true"/></textElement>
                 <textFieldExpression><![CDATA["OS #" + $P{NUMERO_OS}]]></textFieldExpression>
             </textField>
             <textField>
-                <reportElement x="255" y="422" width="247" height="11" forecolor="#D9E1EA"/>
+                <reportElement x="255" y="25" width="247" height="11" forecolor="#D9E1EA"/>
                 <textElement textAlignment="Right"><font fontName="SansSerif" size="7"/></textElement>
                 <textFieldExpression><![CDATA[$P{TIPO_DOCUMENTO} + " • " + $P{DATA_EMISSAO}]]></textFieldExpression>
             </textField>
 
             <frame>
-                <reportElement x="0" y="447" width="515" height="50"/>
+                <reportElement x="0" y="50" width="515" height="50"/>
                 <box><pen lineWidth="0.5" lineColor="#D6DDE5"/></box>
                 <staticText><reportElement style="label" x="8" y="3" width="100" height="8"/><text><![CDATA[AÇÃO GAMES]]></text></staticText>
                 <staticText><reportElement style="value" x="8" y="12" width="499" height="33"/><textElement><font fontName="SansSerif" size="7" isBold="false"/></textElement><text><![CDATA[R. Prof. Quintiliano de Azevedo, 31 - lj9 - Guandú, Cachoeiro de Itapemirim - ES, 29300-195
@@ -76,7 +76,7 @@ Instagram: @gamesacao]]></text></staticText>
             </frame>
 
             <frame>
-                <reportElement x="0" y="504" width="252" height="58"/>
+                <reportElement x="0" y="107" width="252" height="58"/>
                 <box><pen lineWidth="0.5" lineColor="#D6DDE5"/></box>
                 <staticText><reportElement style="label" x="8" y="5" width="90" height="10"/><text><![CDATA[CLIENTE]]></text></staticText>
                 <textField textAdjust="ScaleFont">
@@ -85,7 +85,7 @@ Instagram: @gamesacao]]></text></staticText>
                 </textField>
             </frame>
             <frame>
-                <reportElement x="263" y="504" width="252" height="58"/>
+                <reportElement x="263" y="107" width="252" height="58"/>
                 <box><pen lineWidth="0.5" lineColor="#D6DDE5"/></box>
                 <staticText><reportElement style="label" x="8" y="5" width="100" height="10"/><text><![CDATA[EQUIPAMENTO]]></text></staticText>
                 <textField textAdjust="ScaleFont">
@@ -94,26 +94,26 @@ Instagram: @gamesacao]]></text></staticText>
                 </textField>
             </frame>
             <frame>
-                <reportElement x="0" y="569" width="515" height="40"/>
+                <reportElement x="0" y="172" width="515" height="40"/>
                 <box><pen lineWidth="0.5" lineColor="#D6DDE5"/></box>
                 <staticText><reportElement style="label" x="8" y="5" width="130" height="10"/><text><![CDATA[PROBLEMA RELATADO]]></text></staticText>
                 <textField textAdjust="ScaleFont"><reportElement style="value" x="8" y="16" width="499" height="19"/><textFieldExpression><![CDATA[$P{PROBLEMA_RELATADO}]]></textFieldExpression></textField>
             </frame>
             <frame>
-                <reportElement x="0" y="616" width="515" height="96"/>
+                <reportElement x="0" y="219" width="515" height="96"/>
                 <box><pen lineWidth="0.5" lineColor="#D6DDE5"/></box>
                 <staticText><reportElement style="label" x="8" y="5" width="100" height="10"/><text><![CDATA[OBSERVAÇÕES]]></text></staticText>
                 <textField textAdjust="ScaleFont"><reportElement style="value" x="8" y="16" width="499" height="75"/><textFieldExpression><![CDATA[$P{OBSERVACOES}]]></textFieldExpression></textField>
             </frame>
             <staticText>
-                <reportElement x="0" y="720" width="515" height="20" forecolor="#495561"/>
+                <reportElement x="0" y="323" width="515" height="20" forecolor="#495561"/>
                 <textElement><font fontName="SansSerif" size="6.5"/></textElement>
                 <text><![CDATA[O equipamento foi recebido para manutenção conforme as informações acima e será submetido à avaliação técnica.]]></text>
             </staticText>
-            <line><reportElement x="25" y="783" width="190" height="1"/><graphicElement><pen lineWidth="0.5"/></graphicElement></line>
-            <line><reportElement x="300" y="783" width="190" height="1"/><graphicElement><pen lineWidth="0.5"/></graphicElement></line>
-            <staticText><reportElement x="25" y="788" width="190" height="10"/><textElement textAlignment="Center"><font fontName="SansSerif" size="7"/></textElement><text><![CDATA[Assinatura do cliente]]></text></staticText>
-            <staticText><reportElement x="300" y="788" width="190" height="10"/><textElement textAlignment="Center"><font fontName="SansSerif" size="7"/></textElement><text><![CDATA[Responsável Ação Games]]></text></staticText>
+            <line><reportElement x="25" y="386" width="190" height="1"/><graphicElement><pen lineWidth="0.5"/></graphicElement></line>
+            <line><reportElement x="300" y="386" width="190" height="1"/><graphicElement><pen lineWidth="0.5"/></graphicElement></line>
+            <staticText><reportElement x="25" y="391" width="190" height="10"/><textElement textAlignment="Center"><font fontName="SansSerif" size="7"/></textElement><text><![CDATA[Assinatura do cliente]]></text></staticText>
+            <staticText><reportElement x="300" y="391" width="190" height="10"/><textElement textAlignment="Center"><font fontName="SansSerif" size="7"/></textElement><text><![CDATA[Responsável Ação Games]]></text></staticText>
         </band>
     </title>
     

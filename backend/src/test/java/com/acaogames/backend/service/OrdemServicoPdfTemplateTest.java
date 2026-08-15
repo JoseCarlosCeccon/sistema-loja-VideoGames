@@ -16,6 +16,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.LocalDate;
+import net.sf.jasperreports.engine.JRBand;
+import net.sf.jasperreports.engine.JRElement;
 import net.sf.jasperreports.engine.JasperCompileManager;
 import net.sf.jasperreports.engine.JasperReport;
 import org.junit.jupiter.api.Test;
@@ -34,6 +36,32 @@ class OrdemServicoPdfTemplateTest {
             try (InputStream inputStream = new ClassPathResource(template).getInputStream()) {
                 JasperReport report = JasperCompileManager.compileReport(inputStream);
                 assertNotNull(report);
+            }
+        }
+    }
+
+    @Test
+    void notasDeEntradaESaidaDevemComecarNoTopoDaAreaImprimivel() throws Exception {
+        String[] templates = {
+            "reports/ordem-servico-entrada.jrxml",
+            "reports/ordem-servico-saida.jrxml"
+        };
+
+        for (String template : templates) {
+            try (InputStream inputStream = new ClassPathResource(template).getInputStream()) {
+                JasperReport report = JasperCompileManager.compileReport(inputStream);
+                JRBand title = report.getTitle();
+                int firstY = Integer.MAX_VALUE;
+                int lastY = 0;
+
+                for (JRElement element : title.getElements()) {
+                    firstY = Math.min(firstY, element.getY());
+                    lastY = Math.max(lastY, element.getY() + element.getHeight());
+                }
+
+                assertEquals(0, firstY, template);
+                assertEquals(401, title.getHeight(), template);
+                assertTrue(lastY <= title.getHeight(), template);
             }
         }
     }
