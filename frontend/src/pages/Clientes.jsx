@@ -2,11 +2,19 @@ import React, { useEffect, useState } from "react";
 import { api } from "../services/api";
 import searchIcon from "../assets/icons/search.svg";
 import { formatCpf, formatPhone } from "../utils/masks";
+import SortableHeader from "../components/SortableHeader";
+import { compareText, nextSort, sortRows } from "../utils/tableSorting";
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL"
 });
+
+const clientSortColumns = {
+  nome: { type: "text", value: (cliente) => cliente.nome },
+  status: { type: "number", value: (cliente) => cliente.ativo ? 1 : 0 },
+  cadastro: { type: "date", value: (cliente) => cliente.dataCadastro }
+};
 
 function createEmptyClienteForm() {
   return {
@@ -80,7 +88,14 @@ export default function ClientesPage({
   const [clienteRecords, setClienteRecords] = useState({ ordens: [], vendas: [] });
   const [recordsLoading, setRecordsLoading] = useState(false);
   const [savingCliente, setSavingCliente] = useState(false);
-  const filteredClientes = filterClientes(clientes, search);
+  const [clientSort, setClientSort] = useState({ sortBy: "nome", sortOrder: "asc" });
+  const filteredClientes = sortRows(
+    filterClientes(clientes, search),
+    clientSort,
+    clientSortColumns,
+    (left, right) => compareText(left.nome, right.nome)
+      || Number(right.idCliente || 0) - Number(left.idCliente || 0)
+  );
   const totalClientes = clientes.length;
   const activeClientes = clientes.filter((cliente) => cliente.ativo).length;
   const inactiveClientes = clientes.length - activeClientes;
@@ -93,6 +108,10 @@ export default function ClientesPage({
     if (onFeedback) {
       onFeedback(feedback);
     }
+  }
+
+  function updateClientSort(sortBy) {
+    setClientSort((current) => nextSort(current, sortBy));
   }
 
   async function refreshClientes(options = {}) {
@@ -361,12 +380,12 @@ export default function ClientesPage({
             <table className="compact-table clients-table">
               <thead>
                 <tr>
-                  <th>Cliente</th>
+                  <SortableHeader label="Cliente" sortKey="nome" sort={clientSort} onSort={updateClientSort} />
                   <th>Telefone</th>
                   <th>CPF</th>
                   <th>Email</th>
-                  <th>Status</th>
-                  <th>Cadastro</th>
+                  <SortableHeader label="Status" sortKey="status" sort={clientSort} onSort={updateClientSort} />
+                  <SortableHeader label="Cadastro" sortKey="cadastro" sort={clientSort} onSort={updateClientSort} />
                   <th>Acoes</th>
                 </tr>
               </thead>

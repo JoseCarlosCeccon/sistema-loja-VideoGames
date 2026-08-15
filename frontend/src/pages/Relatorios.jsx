@@ -3,6 +3,8 @@ import { api } from "../services/api";
 import arrowDownIcon from "../assets/icons/arrow-down-to-line.svg";
 import fileTextIcon from "../assets/icons/file-text.svg";
 import searchIcon from "../assets/icons/search.svg";
+import SortableHeader from "../components/SortableHeader";
+import { nextSort } from "../utils/tableSorting";
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const numberFormatter = new Intl.NumberFormat("pt-BR");
@@ -17,15 +19,23 @@ const reportTabs = [
   { id: "produtos", label: "Produtos" }
 ];
 
-const productSortOptions = [
-  ["MAIS_UNIDADES", "Mais vendidos por quantidade"],
-  ["MAIS_VENDAS", "Mais vendidos por número de vendas"],
-  ["MAIOR_FATURAMENTO", "Maior faturamento"],
-  ["MENOR_FATURAMENTO", "Menor faturamento"],
-  ["MENOS_UNIDADES", "Menos vendidos"],
-  ["NOME_ASC", "Nome A-Z"],
-  ["NOME_DESC", "Nome Z-A"]
-];
+const productColumnSortKeys = {
+  produto: "produto",
+  categoria: "categoria",
+  unidadesVendidas: "unidadesVendidas",
+  numeroVendas: "numeroVendas",
+  precoMedio: "precoMedio",
+  faturamento: "faturamento"
+};
+
+const productSortLabels = {
+  produto: "Produto",
+  categoria: "Categoria",
+  unidadesVendidas: "Unidades vendidas",
+  numeroVendas: "Nº de vendas",
+  precoMedio: "Preço médio",
+  faturamento: "Faturamento"
+};
 
 const emptyReport = {
   columns: [], rows: [], summary: {}, comparison: {}, rankings: {},
@@ -33,7 +43,7 @@ const emptyReport = {
 };
 
 const initialProductFilters = {
-  idProduto: "", categoria: "", movimentacao: "TODOS", ordenarPor: "MAIS_UNIDADES"
+  idProduto: "", categoria: "", movimentacao: "TODOS"
 };
 
 export default function RelatoriosPage({ onFeedback }) {
@@ -46,6 +56,7 @@ export default function RelatoriosPage({ onFeedback }) {
   const [exporting, setExporting] = useState(false);
   const [report, setReport] = useState(emptyReport);
   const [productFilters, setProductFilters] = useState(initialProductFilters);
+  const [productSort, setProductSort] = useState({ sortBy: "unidadesVendidas", sortOrder: "desc" });
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [productOptions, setProductOptions] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -63,7 +74,7 @@ export default function RelatoriosPage({ onFeedback }) {
   }, [
     activeReport, period.start, period.end, search, page, pageSize,
     productFilters.idProduto, productFilters.categoria,
-    productFilters.movimentacao, productFilters.ordenarPor
+    productFilters.movimentacao, productSort.sortBy, productSort.sortOrder
   ]);
 
   useEffect(() => {
@@ -90,7 +101,8 @@ export default function RelatoriosPage({ onFeedback }) {
       if (productFilters.idProduto) params.set("idProduto", productFilters.idProduto);
       if (productFilters.categoria) params.set("categoria", productFilters.categoria);
       params.set("movimentacao", productFilters.movimentacao);
-      params.set("ordenarPor", productFilters.ordenarPor);
+      params.set("sortBy", productSort.sortBy);
+      params.set("sortOrder", productSort.sortOrder);
     }
     return params;
   }
@@ -149,6 +161,11 @@ export default function RelatoriosPage({ onFeedback }) {
     setPage(0);
     setProductFilters((current) => ({ ...current, movimentacao: "SEM_VENDAS" }));
     setPeriod({ start: localIsoDate(start), end: localIsoDate(end) });
+  }
+
+  function updateProductSort(sortBy) {
+    setPage(0);
+    setProductSort((current) => nextSort(current, sortBy));
   }
 
   async function handleExportCsv() {
@@ -244,7 +261,7 @@ export default function RelatoriosPage({ onFeedback }) {
       <div className="report-print-context">
         <strong>Relatório: {currentReportLabel(activeReport)}</strong>
         <span>Período: {formatDate(period.start)} a {formatDate(period.end)}</span>
-        {isProducts ? <span>{appliedProductFilters(productFilters, productOptions)}</span> : null}
+        {isProducts ? <span>{appliedProductFilters(productFilters, productOptions, productSort)}</span> : null}
       </div>
 
       <ReportSummary summary={report.summary || {}} comparison={isProducts ? report.comparison || {} : {}} />
@@ -259,7 +276,14 @@ export default function RelatoriosPage({ onFeedback }) {
           <span className="report-count">{numberFormatter.format(report.totalElements || 0)} registros</span>
         </div>
         {loading ? <div className="empty-state">Carregando relatório...</div> : (
-          <ReportTable columns={report.columns || []} rows={report.rows || []} onRowClick={isProducts ? openProductDetail : null} />
+          <ReportTable
+            columns={report.columns || []}
+            rows={report.rows || []}
+            onRowClick={isProducts ? openProductDetail : null}
+            sortableColumns={isProducts ? productColumnSortKeys : null}
+            sort={isProducts ? productSort : null}
+            onSort={isProducts ? updateProductSort : null}
+          />
         )}
       </section>
 
@@ -301,9 +325,6 @@ function ProductFilters({ open, onToggle, filters, products, categories, onChang
           </select></label>
           <label className="field"><span>Movimentação</span><select value={filters.movimentacao} onChange={(event) => onChange("movimentacao", event.target.value)}>
             <option value="TODOS">Todos</option><option value="COM_VENDAS">Com vendas</option><option value="SEM_VENDAS">Sem vendas</option>
-          </select></label>
-          <label className="field product-report-sort"><span>Ordenar por</span><select value={filters.ordenarPor} onChange={(event) => onChange("ordenarPor", event.target.value)}>
-            {productSortOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select></label>
           <div className="product-report-quick-periods"><span>Sem venda há</span>
             {[30, 60, 90].map((days) => <button key={days} type="button" className="ghost-button" onClick={() => onQuickPeriod(days)}>{days} dias</button>)}
@@ -359,11 +380,13 @@ function RankingCard({ title, rows, formatValue, onSelect }) {
   );
 }
 
-function ReportTable({ columns, rows, onRowClick }) {
+function ReportTable({ columns, rows, onRowClick, sortableColumns, sort, onSort }) {
   if (!rows.length) return <div className="empty-state">Nenhum registro encontrado para os filtros atuais.</div>;
   return (
     <div className="table-wrap"><table className="compact-table clients-table">
-      <thead><tr>{columns.map((column) => <th key={column.key}>{column.label}</th>)}{onRowClick ? <th className="report-details-column">Detalhes</th> : null}</tr></thead>
+      <thead><tr>{columns.map((column) => sortableColumns?.[column.key] ? (
+        <SortableHeader key={column.key} label={column.label} sortKey={sortableColumns[column.key]} sort={sort} onSort={onSort} />
+      ) : <th key={column.key}>{column.label}</th>)}{onRowClick ? <th className="report-details-column">Detalhes</th> : null}</tr></thead>
       <tbody>{rows.map((row, index) => (
         <tr key={row.id || index} className={onRowClick ? "report-row--interactive" : ""}>
           {columns.map((column) => <td key={column.key} onClick={onRowClick ? () => onRowClick(row) : undefined}>{formatCellValue(row[column.key], column.type)}</td>)}
@@ -450,15 +473,15 @@ function humanizeLabel(value) {
   return String(value || "").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function appliedProductFilters(filters, products) {
+function appliedProductFilters(filters, products, sort) {
   const selectedProduct = products.find((product) => String(product.idProduto) === String(filters.idProduto));
   const movementLabels = { TODOS: "Todos", COM_VENDAS: "Com vendas", SEM_VENDAS: "Sem vendas" };
-  const sortLabel = productSortOptions.find(([value]) => value === filters.ordenarPor)?.[1];
-  return [`Produto: ${selectedProduct?.nome || "Todos"}`, `Categoria: ${filters.categoria || "Todas"}`, `Movimentação: ${movementLabels[filters.movimentacao]}`, `Ordenação: ${sortLabel}`].join(" | ");
+  const directionLabel = sort.sortOrder === "asc" ? "crescente" : "decrescente";
+  return [`Produto: ${selectedProduct?.nome || "Todos"}`, `Categoria: ${filters.categoria || "Todas"}`, `Movimentação: ${movementLabels[filters.movimentacao]}`, `Ordenação: ${productSortLabels[sort.sortBy]} (${directionLabel})`].join(" | ");
 }
 
 function activeProductFilterCount(filters) {
-  return [filters.idProduto, filters.categoria, filters.movimentacao !== "TODOS", filters.ordenarPor !== "MAIS_UNIDADES"].filter(Boolean).length;
+  return [filters.idProduto, filters.categoria, filters.movimentacao !== "TODOS"].filter(Boolean).length;
 }
 
 function formatDate(value) {

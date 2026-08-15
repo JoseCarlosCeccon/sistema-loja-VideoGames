@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../services/api";
 import searchIcon from "../assets/icons/search.svg";
+import SortableHeader from "../components/SortableHeader";
+import { nextSort, sortRows } from "../utils/tableSorting";
 
 const marcas = ["Sony", "Microsoft", "Nintendo"];
 const tiposEquipamento = ["Console", "Controle"];
@@ -20,6 +22,15 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL"
 });
+
+const orderSortColumns = {
+  os: { type: "number", value: (ordem) => ordem.idOrdemServico },
+  cliente: { type: "text", value: (ordem) => ordem.cliente?.nome },
+  equipamento: { type: "text", value: (ordem) => equipmentLabel(ordem.equipamento) },
+  status: { type: "status", value: (ordem) => statusRank(ordem.status) },
+  entrada: { type: "date", value: (ordem) => ordem.dataEntrada },
+  valor: { type: "number", value: (ordem) => parseMoney(ordem.valorServico) }
+};
 
 function createEmptyOrderForm() {
   return {
@@ -170,8 +181,14 @@ export default function EquipamentosPage({
   const [equipmentForm, setEquipmentForm] = useState(createEmptyEquipmentForm);
   const [savingOrder, setSavingOrder] = useState(false);
   const [savingEquipment, setSavingEquipment] = useState(false);
+  const [orderSort, setOrderSort] = useState({ sortBy: "entrada", sortOrder: "desc" });
 
-  const filteredOrders = filterOrders(ordens, search);
+  const filteredOrders = sortRows(
+    filterOrders(ordens, search),
+    orderSort,
+    orderSortColumns,
+    (left, right) => Number(right.idOrdemServico || 0) - Number(left.idOrdemServico || 0)
+  );
   const filteredEquipments = filterEquipments(equipamentos, equipmentSearch);
   const openOrders = ordens.filter((ordem) => !["ENTREGUE", "CANCELADO"].includes(String(ordem.status || ""))).length;
   const readyOrders = ordens.filter((ordem) => String(ordem.status || "") === "PRONTO").length;
@@ -185,6 +202,10 @@ export default function EquipamentosPage({
     if (onFeedback) {
       onFeedback(feedback);
     }
+  }
+
+  function updateOrderSort(sortBy) {
+    setOrderSort((current) => nextSort(current, sortBy));
   }
 
   async function refreshData(options = {}) {
@@ -568,13 +589,13 @@ export default function EquipamentosPage({
             <table className="compact-table clients-table">
               <thead>
                 <tr>
-                  <th>OS</th>
-                  <th>Cliente</th>
-                  <th>Equipamento</th>
+                  <SortableHeader label="OS" sortKey="os" sort={orderSort} onSort={updateOrderSort} />
+                  <SortableHeader label="Cliente" sortKey="cliente" sort={orderSort} onSort={updateOrderSort} />
+                  <SortableHeader label="Equipamento" sortKey="equipamento" sort={orderSort} onSort={updateOrderSort} />
                   <th>Problema</th>
-                  <th>Status</th>
-                  <th>Entrada</th>
-                  <th>Valor</th>
+                  <SortableHeader label="Status" sortKey="status" sort={orderSort} onSort={updateOrderSort} />
+                  <SortableHeader label="Entrada" sortKey="entrada" sort={orderSort} onSort={updateOrderSort} />
+                  <SortableHeader label="Valor" sortKey="valor" sort={orderSort} onSort={updateOrderSort} />
                   <th>Acoes</th>
                 </tr>
               </thead>
@@ -1257,6 +1278,11 @@ function statusTone(status) {
   }
 
   return "blue";
+}
+
+function statusRank(status) {
+  const index = fallbackStatuses.indexOf(String(status || "").toUpperCase());
+  return index >= 0 ? index : fallbackStatuses.length;
 }
 
 function humanizeStatus(status) {

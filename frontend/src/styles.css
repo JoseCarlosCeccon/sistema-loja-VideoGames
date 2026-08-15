@@ -898,6 +898,50 @@ th {
   color: var(--muted);
 }
 
+.sortable-header {
+  padding: 0;
+}
+
+.sortable-header__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 46px;
+  gap: 6px;
+  padding: 13px 10px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-weight: inherit;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.sortable-header__button:hover {
+  background: rgba(112, 227, 255, 0.055);
+  color: var(--text);
+}
+
+.sortable-header__button:focus-visible {
+  outline: 2px solid rgba(112, 227, 255, 0.72);
+  outline-offset: -3px;
+}
+
+.sortable-header__indicator {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1;
+}
+
+.sortable-header--active .sortable-header__button,
+.sortable-header--active .sortable-header__indicator {
+  color: var(--cyan-soft);
+}
+
 td:first-child {
   color: var(--cyan-soft);
   font-weight: 800;
@@ -2210,7 +2254,7 @@ td:first-child {
 
 .product-report-filters__body {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) minmax(150px, 0.72fr) minmax(150px, 0.72fr) minmax(250px, 1.18fr);
+  grid-template-columns: minmax(220px, 1fr) repeat(2, minmax(180px, 0.72fr));
   gap: 12px;
   padding: 0 14px 14px;
   border-top: 1px solid var(--line);
@@ -2711,6 +2755,11 @@ td:first-child {
   .product-ranking-list strong,
   .product-ranking-list span {
     color: #111827 !important;
+  }
+
+  .sortable-header__button,
+  .sortable-header__indicator {
+    color: #374151 !important;
   }
 
   .report-panel {
