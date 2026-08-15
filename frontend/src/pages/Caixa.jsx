@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../services/api";
 import searchIcon from "../assets/icons/search.svg";
+import RowActions from "../components/RowActions";
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -418,7 +419,7 @@ export default function CaixaPage({ onFeedback, onDashboardRefresh }) {
           <div className="empty-state">Carregando movimentos do caixa...</div>
         ) : (
           <div className="table-wrap">
-            <table className="compact-table clients-table">
+            <table className="compact-table clients-table data-table">
               <thead>
                 <tr>
                   <th>Movimento</th>
@@ -427,7 +428,7 @@ export default function CaixaPage({ onFeedback, onDashboardRefresh }) {
                   <th>Pagamento</th>
                   <th>Vinculo</th>
                   <th>Data</th>
-                  <th>Valor</th>
+                  <th className="money-column">Valor</th>
                   <th>Acoes</th>
                 </tr>
               </thead>
@@ -442,35 +443,31 @@ export default function CaixaPage({ onFeedback, onDashboardRefresh }) {
                         <small>#{formatMovementNumber(movimento.idMovimentoCaixa)}</small>
                       </div>
                     </td>
-                    <td>{movimento.descricao || "Sem descricao"}</td>
+                    <td><span className="table-cell-clamp" title={movimento.descricao || "Sem descricao"}>{movimento.descricao || "Sem descricao"}</span></td>
                     <td>{humanizeStatus(movimento.categoria)}</td>
                     <td>{humanizeStatus(movimento.formaPagamento)}</td>
-                    <td>{movementLinkLabel(movimento)}</td>
+                    <td><span className="table-cell-clamp" title={movementLinkLabel(movimento)}>{movementLinkLabel(movimento)}</span></td>
                     <td>{formatDateTime(movimento.dataMovimento)}</td>
-                    <td>
+                    <td className="money-column">
                       <strong className={isEntrada(movimento) ? "cash-value cash-value--positive" : "cash-value cash-value--negative"}>
                         {isEntrada(movimento) ? "+" : "-"}{currencyFormatter.format(parseMoney(movimento.valor))}
                       </strong>
                     </td>
                     <td>
-                      <div className="row-actions">
-                        {movimento.venda?.idVenda ? (
-                          <button
-                            type="button"
-                            className="table-action"
-                            onClick={() => openSaleReceiptPdf(movimento)}
-                            aria-label={`Visualizar PDF da venda ${movimento.venda.idVenda}`}
-                          >
-                            PDF
-                          </button>
-                        ) : null}
-                        <button type="button" className="table-action table-action--edit" onClick={() => openCashEditModal(movimento)}>
-                          Editar
-                        </button>
-                        <button type="button" className="table-action table-action--danger" onClick={() => handleCashDelete(movimento)}>
-                          Excluir
-                        </button>
-                      </div>
+                      <RowActions
+                        menuLabel={`Mais acoes do movimento ${formatMovementNumber(movimento.idMovimentoCaixa)}`}
+                        primary={[
+                          { key: "edit", label: "Editar", className: "table-action--edit", onClick: () => openCashEditModal(movimento) }
+                        ]}
+                        secondary={[
+                          movimento.venda?.idVenda && {
+                            key: "pdf",
+                            label: "PDF da venda",
+                            onClick: () => openSaleReceiptPdf(movimento)
+                          },
+                          { key: "delete", label: "Excluir", danger: true, onClick: () => handleCashDelete(movimento) }
+                        ]}
+                      />
                     </td>
                   </tr>
                 )) : (

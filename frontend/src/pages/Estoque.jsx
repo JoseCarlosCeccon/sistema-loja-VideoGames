@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../services/api";
 import searchIcon from "../assets/icons/search.svg";
+import EntityCell from "../components/EntityCell";
+import RowActions from "../components/RowActions";
 import SortableHeader from "../components/SortableHeader";
+import { productCategoryIcon } from "../utils/entityIcons";
 import { compareText, nextSort, sortRows } from "../utils/tableSorting";
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
@@ -396,16 +399,16 @@ export default function EstoquePage({ produtos, onProdutosChange, onFeedback }) 
           <div className="empty-state">Carregando produtos...</div>
         ) : (
           <div className="table-wrap">
-            <table className="compact-table clients-table">
+            <table className="compact-table clients-table data-table">
               <thead>
                 <tr>
                   <SortableHeader label="Produto" sortKey="produto" sort={stockSort} onSort={updateStockSort} />
                   <SortableHeader label="Categoria" sortKey="categoria" sort={stockSort} onSort={updateStockSort} />
-                  <SortableHeader label="Qtd" sortKey="quantidade" sort={stockSort} onSort={updateStockSort} />
-                  <SortableHeader label="Mínimo" sortKey="minimo" sort={stockSort} onSort={updateStockSort} />
-                  <SortableHeader label="Compra" sortKey="compra" sort={stockSort} onSort={updateStockSort} />
-                  <SortableHeader label="À vista" sortKey="vista" sort={stockSort} onSort={updateStockSort} />
-                  <SortableHeader label="À prazo" sortKey="prazo" sort={stockSort} onSort={updateStockSort} />
+                  <SortableHeader label="Qtd" sortKey="quantidade" sort={stockSort} onSort={updateStockSort} className="numeric-column" />
+                  <SortableHeader label="Mínimo" sortKey="minimo" sort={stockSort} onSort={updateStockSort} className="numeric-column" />
+                  <SortableHeader label="Compra" sortKey="compra" sort={stockSort} onSort={updateStockSort} className="money-column" />
+                  <SortableHeader label="À vista" sortKey="vista" sort={stockSort} onSort={updateStockSort} className="money-column" />
+                  <SortableHeader label="À prazo" sortKey="prazo" sort={stockSort} onSort={updateStockSort} className="money-column" />
                   <SortableHeader label="Status" sortKey="status" sort={stockSort} onSort={updateStockSort} />
                   <th>Acoes</th>
                 </tr>
@@ -414,20 +417,21 @@ export default function EstoquePage({ produtos, onProdutosChange, onFeedback }) 
                 {filteredProducts.length ? filteredProducts.map((produto) => (
                   <tr key={produto.idProduto}>
                     <td>
-                      <div className="client-cell">
-                        <ProductThumb produto={produto} />
-                        <div>
-                          <strong>{produto.nome}</strong>
-                          <small>{produto.descricao || "Sem descricao"}</small>
-                        </div>
-                      </div>
+                      <EntityCell
+                        title={produto.nome}
+                        subtitle={produto.descricao || "Sem descricao"}
+                        iconSrc={productCategoryIcon(produto.categoria)}
+                        imageSrc={produto.possuiFoto ? productPhotoUrl(produto) : ""}
+                        imageAlt={produto.possuiFoto ? `Foto de ${produto.nome}` : ""}
+                        tone="product"
+                      />
                     </td>
                     <td>{produto.categoria}</td>
-                    <td>{produto.quantidadeEstoque}</td>
-                    <td>{produto.estoqueMinimo}</td>
-                    <td>{currencyFormatter.format(parseMoney(produto.valorCompra))}</td>
-                    <td>{currencyFormatter.format(productCashPrice(produto))}</td>
-                    <td>{currencyFormatter.format(productTermPrice(produto))}</td>
+                    <td className="numeric-column">{produto.quantidadeEstoque}</td>
+                    <td className="numeric-column">{produto.estoqueMinimo}</td>
+                    <td className="money-column">{currencyFormatter.format(parseMoney(produto.valorCompra))}</td>
+                    <td className="money-column">{currencyFormatter.format(productCashPrice(produto))}</td>
+                    <td className="money-column">{currencyFormatter.format(productTermPrice(produto))}</td>
                     <td>
                       <div className="stock-status-stack">
                         <span className={`status-badge status-badge--${produto.ativo ? "green" : "red"}`}>
@@ -439,17 +443,16 @@ export default function EstoquePage({ produtos, onProdutosChange, onFeedback }) 
                       </div>
                     </td>
                     <td>
-                      <div className="row-actions">
-                        <button type="button" className="table-action" onClick={() => openProductDetails(produto)}>
-                          Ver
-                        </button>
-                        <button type="button" className="table-action table-action--edit" onClick={() => openProductEditModal(produto)}>
-                          Editar
-                        </button>
-                        <button type="button" className="table-action table-action--danger" onClick={() => handleProductDelete(produto)}>
-                          Excluir
-                        </button>
-                      </div>
+                      <RowActions
+                        menuLabel={`Mais acoes de ${produto.nome}`}
+                        primary={[
+                          { key: "view", label: "Ver", onClick: () => openProductDetails(produto) },
+                          { key: "edit", label: "Editar", className: "table-action--edit", onClick: () => openProductEditModal(produto) }
+                        ]}
+                        secondary={[
+                          { key: "delete", label: "Excluir", danger: true, onClick: () => handleProductDelete(produto) }
+                        ]}
+                      />
                     </td>
                   </tr>
                 )) : (
@@ -611,7 +614,7 @@ function ProductModal({ form, selectedProduct, saving, onClose, onSubmit, onChan
                       {form.fotoPreviewUrl ? (
                         <img src={form.fotoPreviewUrl} alt={`Foto de ${form.nome || "produto"}`} />
                       ) : (
-                        <span>{productInitials(form)}</span>
+                        <SvgIcon src={productCategoryIcon(form.categoria)} size={24} />
                       )}
                     </div>
                     <div className="product-photo-actions">
@@ -713,22 +716,6 @@ function ProductDetailsModal({ produto, onClose, onEdit }) {
   );
 }
 
-function ProductThumb({ produto }) {
-  if (produto.possuiFoto) {
-    return (
-      <span className={`client-avatar product-thumb ${isLowStock(produto) ? "stock-avatar--low" : ""}`}>
-        <img src={productPhotoUrl(produto)} alt={`Foto de ${produto.nome}`} loading="lazy" />
-      </span>
-    );
-  }
-
-  return (
-    <span className={`client-avatar ${isLowStock(produto) ? "stock-avatar--low" : ""}`}>
-      {productInitials(produto)}
-    </span>
-  );
-}
-
 function DetailItem({ label, value, wide = false }) {
   return (
     <article className={`detail-item ${wide ? "detail-item--wide" : ""}`}>
@@ -788,13 +775,6 @@ function parseMoney(value) {
   const normalized = String(value || "0").replace(",", ".");
   const number = Number(normalized);
   return Number.isFinite(number) ? number : 0;
-}
-
-function productInitials(produto) {
-  return String(produto?.nome || "PR")
-    .trim()
-    .slice(0, 2)
-    .toUpperCase();
 }
 
 function productPhotoUrl(produto) {

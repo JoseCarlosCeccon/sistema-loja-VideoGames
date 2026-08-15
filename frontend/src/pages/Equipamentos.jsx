@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../services/api";
 import searchIcon from "../assets/icons/search.svg";
+import EntityCell from "../components/EntityCell";
+import RowActions from "../components/RowActions";
 import ServiceOrderStatusBadge from "../components/ServiceOrderStatusBadge";
 import SortableHeader from "../components/SortableHeader";
+import { equipmentTypeIcon } from "../utils/entityIcons";
 import { nextSort, sortRows } from "../utils/tableSorting";
 
 const marcas = ["Sony", "Microsoft", "Nintendo"];
@@ -587,7 +590,7 @@ export default function EquipamentosPage({
           <div className="empty-state">Carregando ordens de servico...</div>
         ) : (
           <div className="table-wrap">
-            <table className="compact-table clients-table">
+            <table className="compact-table clients-table data-table">
               <thead>
                 <tr>
                   <SortableHeader label="OS" sortKey="os" sort={orderSort} onSort={updateOrderSort} />
@@ -602,7 +605,7 @@ export default function EquipamentosPage({
                     className="service-order-status-column"
                   />
                   <SortableHeader label="Entrada" sortKey="entrada" sort={orderSort} onSort={updateOrderSort} />
-                  <SortableHeader label="Valor" sortKey="valor" sort={orderSort} onSort={updateOrderSort} />
+                  <SortableHeader label="Valor" sortKey="valor" sort={orderSort} onSort={updateOrderSort} className="money-column" />
                   <th>Acoes</th>
                 </tr>
               </thead>
@@ -611,45 +614,28 @@ export default function EquipamentosPage({
                   <tr key={ordem.idOrdemServico}>
                     <td>#{formatNumber(ordem.idOrdemServico)}</td>
                     <td>{ordem.cliente?.nome || "Cliente nao informado"}</td>
-                    <td>{equipmentLabel(ordem.equipamento)}</td>
-                    <td>{ordem.problemaRelatado || "Nao informado"}</td>
+                    <td><span className="table-cell-clamp" title={equipmentLabel(ordem.equipamento)}>{equipmentLabel(ordem.equipamento)}</span></td>
+                    <td><span className="table-cell-clamp" title={ordem.problemaRelatado || "Nao informado"}>{ordem.problemaRelatado || "Nao informado"}</span></td>
                     <td className="service-order-status-column">
                       <ServiceOrderStatusBadge status={ordem.status} />
                     </td>
                     <td>{formatDate(ordem.dataEntrada)}</td>
-                    <td>{currencyFormatter.format(parseMoney(ordem.valorServico))}</td>
+                    <td className="money-column">{currencyFormatter.format(parseMoney(ordem.valorServico))}</td>
                     <td>
-                      <div className="row-actions">
-                        <button type="button" className="table-action" onClick={() => openOrderDetails(ordem)}>
-                          Ver
-                        </button>
-                        {!isFinalizedOrder(ordem) ? (
-                          <>
-                            <button type="button" className="table-action table-action--edit" onClick={() => openOrderEditModal(ordem)}>
-                              Editar
-                            </button>
-                            {canRegisterBudget(ordem) ? (
-                              <button type="button" className="table-action" onClick={() => openOrderBudgetModal(ordem)}>
-                                Orcamento
-                              </button>
-                            ) : null}
-                            {canAuthorizeOrder(ordem) ? (
-                              <button type="button" className="table-action" onClick={() => openOrderAuthorizationModal(ordem)}>
-                                Autorizar
-                              </button>
-                            ) : null}
-                            <button type="button" className="table-action table-action--edit" onClick={() => handleSendToSaida(ordem)}>
-                              Saida
-                            </button>
-                          </>
-                        ) : null}
-                        <button type="button" className="table-action" onClick={() => openServiceOrderPdf(ordem)}>
-                          PDF
-                        </button>
-                        <button type="button" className="table-action table-action--danger" onClick={() => handleOrderDelete(ordem)}>
-                          Excluir
-                        </button>
-                      </div>
+                      <RowActions
+                        menuLabel={`Mais acoes da OS ${formatNumber(ordem.idOrdemServico)}`}
+                        primary={[
+                          { key: "view", label: "Ver", onClick: () => openOrderDetails(ordem) },
+                          !isFinalizedOrder(ordem) && { key: "exit", label: "Saida", className: "table-action--edit", onClick: () => handleSendToSaida(ordem) }
+                        ]}
+                        secondary={[
+                          !isFinalizedOrder(ordem) && { key: "edit", label: "Editar", onClick: () => openOrderEditModal(ordem) },
+                          canRegisterBudget(ordem) && { key: "budget", label: "Orcamento", onClick: () => openOrderBudgetModal(ordem) },
+                          canAuthorizeOrder(ordem) && { key: "authorize", label: "Autorizar", onClick: () => openOrderAuthorizationModal(ordem) },
+                          { key: "pdf", label: "PDF", onClick: () => openServiceOrderPdf(ordem) },
+                          { key: "delete", label: "Excluir", danger: true, onClick: () => handleOrderDelete(ordem) }
+                        ]}
+                      />
                     </td>
                   </tr>
                 )) : (
@@ -1065,7 +1051,7 @@ function EquipmentManagerModal({
           ) : null}
 
           <div className="table-wrap equipment-manager__table">
-            <table className="compact-table clients-table">
+            <table className="compact-table clients-table data-table">
               <thead>
                 <tr>
                   <th>Equipamento</th>
@@ -1080,13 +1066,12 @@ function EquipmentManagerModal({
                 {equipamentos.length ? equipamentos.map((equipamento) => (
                   <tr key={equipamento.idEquipamento}>
                     <td>
-                      <div className="client-cell">
-                        <span className="client-avatar">{equipmentInitials(equipamento)}</span>
-                        <div>
-                          <strong>{equipamento.modelo}</strong>
-                          <small>{equipamento.descricao || "Sem descricao"}</small>
-                        </div>
-                      </div>
+                      <EntityCell
+                        title={equipamento.modelo}
+                        subtitle={equipamento.descricao || "Sem descricao"}
+                        iconSrc={equipmentTypeIcon(equipamento.tipoEquipamento)}
+                        tone="equipment"
+                      />
                     </td>
                     <td>{equipamento.marca}</td>
                     <td>{equipamento.tipoEquipamento}</td>
@@ -1097,14 +1082,15 @@ function EquipmentManagerModal({
                     </td>
                     <td>{formatDateTime(equipamento.dataCadastro)}</td>
                     <td>
-                      <div className="row-actions">
-                        <button type="button" className="table-action table-action--edit" onClick={() => onEdit(equipamento)}>
-                          Editar
-                        </button>
-                        <button type="button" className="table-action table-action--danger" onClick={() => onDelete(equipamento)}>
-                          Excluir
-                        </button>
-                      </div>
+                      <RowActions
+                        menuLabel={`Mais acoes de ${equipamento.modelo}`}
+                        primary={[
+                          { key: "edit", label: "Editar", className: "table-action--edit", onClick: () => onEdit(equipamento) }
+                        ]}
+                        secondary={[
+                          { key: "delete", label: "Excluir", danger: true, onClick: () => onDelete(equipamento) }
+                        ]}
+                      />
                     </td>
                   </tr>
                 )) : (
@@ -1168,13 +1154,6 @@ function equipmentLabel(equipamento) {
   return [equipamento.marca, equipamento.tipoEquipamento, equipamento.modelo]
     .filter(Boolean)
     .join(" - ");
-}
-
-function equipmentInitials(equipamento) {
-  return String(equipamento?.modelo || equipamento?.marca || "EQ")
-    .trim()
-    .slice(0, 2)
-    .toUpperCase();
 }
 
 function isFinalizedOrder(ordem) {

@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../services/api";
 import searchIcon from "../assets/icons/search.svg";
+import userIcon from "../assets/icons/user.svg";
 import { formatCpf, formatPhone } from "../utils/masks";
+import EntityCell from "../components/EntityCell";
+import RowActions from "../components/RowActions";
 import ServiceOrderStatusBadge from "../components/ServiceOrderStatusBadge";
 import SortableHeader from "../components/SortableHeader";
 import { compareText, nextSort, sortRows } from "../utils/tableSorting";
@@ -378,7 +381,7 @@ export default function ClientesPage({
           <div className="empty-state">Carregando clientes...</div>
         ) : (
           <div className="table-wrap">
-            <table className="compact-table clients-table">
+            <table className="compact-table clients-table data-table">
               <thead>
                 <tr>
                   <SortableHeader label="Cliente" sortKey="nome" sort={clientSort} onSort={updateClientSort} />
@@ -394,13 +397,12 @@ export default function ClientesPage({
                 {filteredClientes.length ? filteredClientes.map((cliente) => (
                   <tr key={cliente.idCliente}>
                     <td>
-                      <div className="client-cell">
-                        <span className="client-avatar">{clienteInitials(cliente)}</span>
-                        <div>
-                          <strong>{cliente.nome}</strong>
-                          <small>#{formatClientNumber(cliente.idCliente)}</small>
-                        </div>
-                      </div>
+                      <EntityCell
+                        title={cliente.nome}
+                        subtitle={`#${formatClientNumber(cliente.idCliente)}`}
+                        iconSrc={userIcon}
+                        tone="client"
+                      />
                     </td>
                     <td>{displayValue(cliente.telefone)}</td>
                     <td>{displayValue(cliente.cpf)}</td>
@@ -412,17 +414,17 @@ export default function ClientesPage({
                     </td>
                     <td>{formatDateTime(cliente.dataCadastro)}</td>
                     <td>
-                      <div className="row-actions">
-                        <button type="button" className="table-action" onClick={() => openClienteDetails(cliente)}>
-                          Ver
-                        </button>
-                        <button type="button" className="table-action" onClick={() => openClienteRecords(cliente)}>
-                          Registros
-                        </button>
-                        <button type="button" className="table-action table-action--danger" onClick={() => handleClienteDelete(cliente)}>
-                          Excluir
-                        </button>
-                      </div>
+                      <RowActions
+                        menuLabel={`Mais acoes de ${cliente.nome}`}
+                        primary={[
+                          { key: "view", label: "Ver", onClick: () => openClienteDetails(cliente) },
+                          { key: "edit", label: "Editar", className: "table-action--edit", onClick: () => openClienteEditModal(cliente) }
+                        ]}
+                        secondary={[
+                          { key: "records", label: "Registros", onClick: () => openClienteRecords(cliente) },
+                          { key: "delete", label: "Excluir", danger: true, onClick: () => handleClienteDelete(cliente) }
+                        ]}
+                      />
                     </td>
                   </tr>
                 )) : (
@@ -849,12 +851,6 @@ function openSaleReceiptPdf(venda) {
   }
 
   window.open(api.fileUrl(`/vendas/${idVenda}/pdf`), "_blank", "noopener,noreferrer");
-}
-
-function clienteInitials(cliente) {
-  const parts = String(cliente?.nome || "CL").trim().split(/\s+/);
-  const initials = parts.slice(0, 2).map((part) => part.charAt(0)).join("");
-  return initials.toUpperCase() || "CL";
 }
 
 function displayValue(value) {

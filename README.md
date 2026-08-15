@@ -134,6 +134,9 @@ O refinamento visual e as fontes de dados reutilizadas pela Home estao documenta
 O menu compacto de usuario e o padrao visual dos status de OS estao documentados em
 `docs/header-status-ui.md`.
 
+O sistema visual compartilhado das tabelas de Clientes, Estoque, Ordens de Servico, Equipamentos
+e Caixa esta documentado em `docs/padrao-visual-tabelas.md`.
+
 ## Frontend
 
 - Stack: React 18 + Vite

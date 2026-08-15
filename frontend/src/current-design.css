@@ -1145,6 +1145,55 @@ td:first-child {
   color: var(--red);
 }
 
+/* Light-theme refinements for the shared management table system. */
+.data-table tbody tr:hover {
+  background: #f4f8fb;
+}
+
+.entity-cell__visual {
+  border-color: #d5e7eb;
+  background: #effafb;
+  color: var(--cyan-soft);
+}
+
+.entity-cell__visual--client {
+  border-color: #d6e2f5;
+  background: #f1f6ff;
+  color: var(--blue);
+}
+
+.entity-cell__visual--equipment {
+  border-color: #dfd7f2;
+  background: #f6f2ff;
+  color: #6048a8;
+}
+
+.row-actions-menu {
+  border-color: #dce3e9;
+  background: #ffffff;
+  box-shadow: 0 16px 38px rgba(31, 51, 67, 0.16);
+}
+
+.row-actions-menu button {
+  color: var(--muted-strong);
+}
+
+.row-actions-menu button:hover,
+.row-actions-menu button:focus-visible {
+  background: #effafb;
+  color: var(--cyan-soft);
+}
+
+.row-actions-menu .row-actions-menu__danger {
+  color: var(--red);
+}
+
+.row-actions-menu .row-actions-menu__danger:hover,
+.row-actions-menu .row-actions-menu__danger:focus-visible {
+  background: #fff0f0;
+  color: #b42f2f;
+}
+
 @media (max-width: 1240px) {
   .dashboard-main-grid {
     grid-template-columns: 1fr;
