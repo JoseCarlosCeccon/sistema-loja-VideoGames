@@ -128,6 +128,9 @@ As regras de agregacao, comparacao e a limitacao de custo historico estao docume
 O padrao de ordenacao por cabecalho aplicado a Produtos, Ordens de Servico, Clientes e Estoque esta
 documentado em `docs/ordenacao-tabelas.md`.
 
+O refinamento visual e as fontes de dados reutilizadas pela Home estao documentados em
+`docs/home-dashboard.md`.
+
 ## Frontend
 
 - Stack: React 18 + Vite
