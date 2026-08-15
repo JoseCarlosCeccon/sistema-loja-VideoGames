@@ -49,10 +49,15 @@ busca=texto
 idProduto=numero
 categoria=texto
 movimentacao=TODOS|COM_VENDAS|SEM_VENDAS
-ordenarPor=MAIS_UNIDADES|MAIS_VENDAS|MAIOR_FATURAMENTO|MENOR_FATURAMENTO|MENOS_UNIDADES|NOME_ASC|NOME_DESC
+sortBy=produto|categoria|unidadesVendidas|numeroVendas|precoMedio|faturamento
+sortOrder=asc|desc
 page=0
 size=20
 ```
+
+A ordenacao usa uma whitelist no backend e ocorre antes de `LIMIT`/`OFFSET`. O desempate usa nome
+do produto e identificador, mantendo a distribuicao entre paginas previsivel. O estado inicial e
+`sortBy=unidadesVendidas&sortOrder=desc`.
 
 ## Interface, CSV e impressao
 

@@ -2,11 +2,13 @@ package com.acaogames.backend.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.acaogames.backend.dto.ItemVendaRequest;
 import com.acaogames.backend.dto.RelatorioResponse;
 import com.acaogames.backend.dto.VendaRequest;
+import com.acaogames.backend.exception.BadRequestException;
 import com.acaogames.backend.model.MovimentoCaixa;
 import com.acaogames.backend.model.Venda;
 import com.acaogames.backend.repository.MovimentoCaixaRepository;
@@ -57,7 +59,7 @@ class ProdutoRelatorioIntegrationTest {
         Venda vendaB = vendaService.criar(vendaRequest(data, item(1L, 2, "30.00")));
 
         RelatorioResponse report = relatorioService.produtos(
-                data, data, "", null, "", "COM_VENDAS", "MAIS_UNIDADES", 0, 20
+                data, data, "", null, "", "COM_VENDAS", "unidadesVendidas", "desc", 0, 20
         );
 
         assertNumber(6, report.getSummary().get("unidadesVendidas"));
@@ -76,12 +78,12 @@ class ProdutoRelatorioIntegrationTest {
         assertNumber(5, primeiroRanking.get("valor"));
 
         RelatorioResponse pesquisa = relatorioService.produtos(
-                data, data, "Cabo HDMI", null, "", "TODOS", "MAIS_UNIDADES", 0, 20
+                data, data, "Cabo HDMI", null, "", "TODOS", "unidadesVendidas", "desc", 0, 20
         );
         assertEquals(1L, pesquisa.getTotalElements());
 
         RelatorioResponse categoria = relatorioService.produtos(
-                data, data, "", null, "Acessorio", "COM_VENDAS", "MAIOR_FATURAMENTO", 0, 1
+                data, data, "", null, "Acessorio", "COM_VENDAS", "faturamento", "desc", 0, 1
         );
         assertEquals(2L, categoria.getTotalElements());
         assertEquals(1, categoria.getRows().size());
@@ -110,7 +112,7 @@ class ProdutoRelatorioIntegrationTest {
         );
         movimentoCaixaRepository.delete(movimento.getIdMovimentoCaixa());
         RelatorioResponse semMovimento = relatorioService.produtos(
-                data, data, "", 2L, "", "COM_VENDAS", "MAIS_UNIDADES", 0, 20
+                data, data, "", 2L, "", "COM_VENDAS", "unidadesVendidas", "desc", 0, 20
         );
         assertEquals(0L, semMovimento.getTotalElements());
         assertNumber(0, semMovimento.getSummary().get("unidadesVendidas"));
@@ -120,7 +122,7 @@ class ProdutoRelatorioIntegrationTest {
 
         vendaService.remover(venda.getIdVenda());
         RelatorioResponse excluida = relatorioService.produtos(
-                data, data, "", 2L, "", "COM_VENDAS", "MAIS_UNIDADES", 0, 20
+                data, data, "", 2L, "", "COM_VENDAS", "unidadesVendidas", "desc", 0, 20
         );
         assertEquals(0L, excluida.getTotalElements());
         assertNumber(0, excluida.getSummary().get("vendasRealizadas"));
@@ -139,7 +141,8 @@ class ProdutoRelatorioIntegrationTest {
                 null,
                 "",
                 "COM_VENDAS",
-                "MAIS_UNIDADES",
+                "unidadesVendidas",
+                "desc",
                 0,
                 20
         );
@@ -158,7 +161,8 @@ class ProdutoRelatorioIntegrationTest {
                 1L,
                 "",
                 "TODOS",
-                "MAIS_UNIDADES",
+                "unidadesVendidas",
+                "desc",
                 0,
                 20
         );
@@ -172,13 +176,71 @@ class ProdutoRelatorioIntegrationTest {
         LocalDate fim = LocalDate.of(2042, 3, 31);
 
         RelatorioResponse report = relatorioService.produtos(
-                inicio, fim, "", 10L, "", "SEM_VENDAS", "NOME_ASC", 0, 20
+                inicio, fim, "", 10L, "", "SEM_VENDAS", "produto", "asc", 0, 20
         );
 
         assertEquals(1L, report.getTotalElements());
         assertEquals("Carregador Nintendo Switch", report.getRows().get(0).get("produto"));
         assertNumber(0, report.getRows().get(0).get("unidadesVendidas"));
         assertTrue(((Number) report.getRows().get(0).get("estoqueAtual")).intValue() > 0);
+    }
+
+    @Test
+    @Transactional
+    void deveOrdenarTodasAsColunasAntesDaPaginacao() {
+        LocalDate data = LocalDate.of(2031, 4, 10);
+        vendaService.criar(vendaRequest(data, item(1L, 1, "9.00")));
+        vendaService.criar(vendaRequest(data, item(2L, 2, "45.00")));
+        vendaService.criar(vendaRequest(data, item(3L, 2, "25.00")));
+        vendaService.criar(vendaRequest(data, item(3L, 1, "50.00")));
+        for (int index = 0; index < 4; index++) {
+            vendaService.criar(vendaRequest(data, item(4L, 1, "250.00")));
+        }
+
+        assertFirstProduct(data, "produto", "asc", 4L);
+        assertFirstProduct(data, "produto", "desc", 3L);
+        assertFirstProduct(data, "categoria", "asc", 1L);
+        assertFirstProduct(data, "categoria", "desc", 4L);
+        assertFirstProduct(data, "unidadesVendidas", "asc", 1L);
+        assertFirstProduct(data, "unidadesVendidas", "desc", 4L);
+        assertFirstProduct(data, "numeroVendas", "asc", 1L);
+        assertFirstProduct(data, "numeroVendas", "desc", 4L);
+        assertFirstProduct(data, "precoMedio", "asc", 1L);
+        assertFirstProduct(data, "precoMedio", "desc", 4L);
+        assertFirstProduct(data, "faturamento", "asc", 1L);
+        assertFirstProduct(data, "faturamento", "desc", 4L);
+
+        RelatorioResponse paginaUm = relatorioService.produtos(
+                data, data, "", null, "", "COM_VENDAS", "faturamento", "desc", 0, 2
+        );
+        RelatorioResponse paginaDois = relatorioService.produtos(
+                data, data, "", null, "", "COM_VENDAS", "faturamento", "desc", 1, 2
+        );
+        assertEquals(4L, paginaUm.getTotalElements());
+        assertEquals(2, paginaUm.getTotalPages());
+        assertId(4L, paginaUm.getRows().get(0).get("id"));
+        assertId(3L, paginaUm.getRows().get(1).get("id"));
+        assertId(2L, paginaDois.getRows().get(0).get("id"));
+        assertId(1L, paginaDois.getRows().get(1).get("id"));
+
+        assertThrows(BadRequestException.class, () -> relatorioService.produtos(
+                data, data, "", null, "", "TODOS", "sql_invalido", "desc", 0, 20
+        ));
+        assertThrows(BadRequestException.class, () -> relatorioService.produtos(
+                data, data, "", null, "", "TODOS", "produto", "delete", 0, 20
+        ));
+    }
+
+    private void assertFirstProduct(LocalDate data, String sortBy, String sortOrder, Long expectedId) {
+        RelatorioResponse report = relatorioService.produtos(
+                data, data, "", null, "", "COM_VENDAS", sortBy, sortOrder, 0, 20
+        );
+        assertId(expectedId, report.getRows().get(0).get("id"));
+    }
+
+    private void assertId(Long expected, Object actual) {
+        assertTrue(actual instanceof Number);
+        assertEquals(expected.longValue(), ((Number) actual).longValue());
     }
 
     private void assertProductMetrics(
@@ -190,7 +252,7 @@ class ProdutoRelatorioIntegrationTest {
             String precoMedio
     ) {
         RelatorioResponse report = relatorioService.produtos(
-                data, data, "", idProduto, "", "COM_VENDAS", "MAIS_UNIDADES", 0, 20
+                data, data, "", idProduto, "", "COM_VENDAS", "unidadesVendidas", "desc", 0, 20
         );
         Map<String, Object> row = rowById(report, idProduto);
         assertNumber(unidades, row.get("unidadesVendidas"));

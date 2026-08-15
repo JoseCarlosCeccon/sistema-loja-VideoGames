@@ -82,12 +82,13 @@ public class RelatorioController {
             @RequestParam(required = false) Long idProduto,
             @RequestParam(defaultValue = "") String categoria,
             @RequestParam(defaultValue = "TODOS") String movimentacao,
-            @RequestParam(defaultValue = "MAIS_UNIDADES") String ordenarPor,
+            @RequestParam(defaultValue = "unidadesVendidas") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortOrder,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
         return relatorioService.produtos(
-                inicio, fim, busca, idProduto, categoria, movimentacao, ordenarPor, page, size
+                inicio, fim, busca, idProduto, categoria, movimentacao, sortBy, sortOrder, page, size
         );
     }
 

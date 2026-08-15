@@ -268,19 +268,21 @@ public class RelatorioService {
             Long idProduto,
             String categoria,
             String movimentacao,
-            String ordenarPor,
+            String sortBy,
+            String sortOrder,
             int page,
             int size
     ) {
         validarPeriodo(inicio, fim);
         PageRequest pageRequest = normalizePage(page, size);
         String movimentoNormalizado = normalizarMovimentacao(movimentacao);
-        String ordenacaoNormalizada = normalizarOrdenacao(ordenarPor);
+        String campoOrdenacao = normalizarCampoOrdenacao(sortBy);
+        String direcaoOrdenacao = normalizarDirecaoOrdenacao(sortOrder);
         MapSqlParameterSource params = produtoParams(
                 inicio, fim, busca, idProduto, categoria, movimentoNormalizado, pageRequest
         );
         String cte = produtoCte();
-        String orderBy = produtoOrderBy(ordenacaoNormalizada);
+        String orderBy = produtoOrderBy(campoOrdenacao, direcaoOrdenacao);
 
         Number total = jdbcTemplate.queryForObject(
                 cte + " SELECT COUNT(*) FROM produtos_filtrados",
@@ -536,42 +538,55 @@ public class RelatorioService {
         return value;
     }
 
-    private String normalizarOrdenacao(String ordenarPor) {
-        String value = ordenarPor == null ? "MAIS_UNIDADES" : ordenarPor.trim().toUpperCase();
-        if (!Arrays.asList(
-                "MAIS_UNIDADES",
-                "MAIS_VENDAS",
-                "MAIOR_FATURAMENTO",
-                "MENOR_FATURAMENTO",
-                "MENOS_UNIDADES",
-                "NOME_ASC",
-                "NOME_DESC"
-        ).contains(value)) {
-            throw new BadRequestException("Ordenacao de produtos invalida.");
+    private String normalizarCampoOrdenacao(String sortBy) {
+        String value = sortBy == null ? "unidadesvendidas" : sortBy.trim().toLowerCase();
+        if ("produto".equals(value)) {
+            return "produto";
         }
-        return value;
+        if ("categoria".equals(value)) {
+            return "categoria";
+        }
+        if ("unidadesvendidas".equals(value)) {
+            return "unidadesVendidas";
+        }
+        if ("numerovendas".equals(value)) {
+            return "numeroVendas";
+        }
+        if ("precomedio".equals(value)) {
+            return "precoMedio";
+        }
+        if ("faturamento".equals(value)) {
+            return "faturamento";
+        }
+        throw new BadRequestException("Campo de ordenacao de produtos invalido.");
     }
 
-    private String produtoOrderBy(String ordenacao) {
-        if ("MAIS_VENDAS".equals(ordenacao)) {
-            return "numero_vendas DESC, unidades_vendidas DESC, produto ASC";
+    private String normalizarDirecaoOrdenacao(String sortOrder) {
+        String value = sortOrder == null ? "desc" : sortOrder.trim().toLowerCase();
+        if (!"asc".equals(value) && !"desc".equals(value)) {
+            throw new BadRequestException("Direcao de ordenacao invalida.");
         }
-        if ("MAIOR_FATURAMENTO".equals(ordenacao)) {
-            return "faturamento DESC, unidades_vendidas DESC, produto ASC";
+        return value.toUpperCase();
+    }
+
+    private String produtoOrderBy(String sortBy, String sortOrder) {
+        String productTieBreaker = "produto COLLATE NOCASE ASC, id_produto DESC";
+        if ("produto".equals(sortBy)) {
+            return "produto COLLATE NOCASE " + sortOrder + ", id_produto DESC";
         }
-        if ("MENOR_FATURAMENTO".equals(ordenacao)) {
-            return "faturamento ASC, produto ASC";
+        if ("categoria".equals(sortBy)) {
+            return "categoria COLLATE NOCASE " + sortOrder + ", " + productTieBreaker;
         }
-        if ("MENOS_UNIDADES".equals(ordenacao)) {
-            return "unidades_vendidas ASC, produto ASC";
+        if ("numeroVendas".equals(sortBy)) {
+            return "numero_vendas " + sortOrder + ", " + productTieBreaker;
         }
-        if ("NOME_ASC".equals(ordenacao)) {
-            return "produto ASC";
+        if ("precoMedio".equals(sortBy)) {
+            return "preco_medio " + sortOrder + ", " + productTieBreaker;
         }
-        if ("NOME_DESC".equals(ordenacao)) {
-            return "produto DESC";
+        if ("faturamento".equals(sortBy)) {
+            return "faturamento " + sortOrder + ", " + productTieBreaker;
         }
-        return "unidades_vendidas DESC, numero_vendas DESC, produto ASC";
+        return "unidades_vendidas " + sortOrder + ", " + productTieBreaker;
     }
 
     private void validarPeriodo(LocalDate inicio, LocalDate fim) {
