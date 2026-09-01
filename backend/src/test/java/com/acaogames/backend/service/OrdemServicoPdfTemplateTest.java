@@ -89,6 +89,13 @@ class OrdemServicoPdfTemplateTest {
     }
 
     @Test
+    void deveExibirCancelamentoComoNaoAutorizadoNoPdf() {
+        OrdemServicoPdfService service = new OrdemServicoPdfService();
+
+        assertEquals("NÃO AUTORIZADO", service.humanizeStatus("CANCELADO"));
+    }
+
+    @Test
     void deveGerarPdfComDadosDaOrdemServico() {
         OrdemServico ordemServico = new OrdemServico();
         Cliente cliente = new Cliente();

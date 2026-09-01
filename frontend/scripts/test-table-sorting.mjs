@@ -1,4 +1,9 @@
 import assert from "node:assert/strict";
+import {
+  canEditServiceOrder,
+  isServiceOrderWorkflowClosed,
+  serviceOrderStatusLabel
+} from "../src/utils/serviceOrderStatus.js";
 import { compareText, nextSort, sortRows } from "../src/utils/tableSorting.js";
 
 const numericColumn = { value: (row) => row.value, type: "number" };
@@ -115,4 +120,9 @@ const stockSearch = stockRows.filter((row) => [row.nome, row.categoria, row.desc
   .some((value) => String(value).toLocaleLowerCase("pt-BR").includes("cabo")));
 assert.deepEqual(stockIds("quantidade", "desc", stockSearch), [3, 1], "Pesquisa deve ocorrer antes da ordenacao do estoque");
 
-console.log("Ordenacao de tabelas: cenarios gerais e de estoque aprovados.");
+assert.equal(serviceOrderStatusLabel("CANCELADO"), "Não autorizado", "Status legado deve usar o novo rotulo");
+assert.equal(isServiceOrderWorkflowClosed("CANCELADO"), true, "Nao autorizado deve permanecer fora do fluxo de saida");
+assert.equal(canEditServiceOrder("CANCELADO"), true, "Nao autorizado deve poder ser alterado novamente");
+assert.equal(canEditServiceOrder("ENTREGUE"), false, "Ordem entregue deve permanecer bloqueada");
+
+console.log("Ordenacao de tabelas e regras de status de OS: cenarios aprovados.");

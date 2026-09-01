@@ -45,7 +45,7 @@ nao sao ordenaveis. Numero e valor usam comparacao numerica; entrada usa `Date`;
 `Intl.Collator` para `pt-BR`.
 
 Status segue a ordem existente em `OrdemServicoStatus`: Recebido, Em analise, Aguardando
-aprovacao, Aprovado, Em manutencao, Pronto, Entregue e Cancelado. O estado inicial mudou de numero
+aprovacao, Aprovado, Em manutencao, Pronto, Entregue e Nao autorizado. O estado inicial mudou de numero
 da OS decrescente para entrada mais recente primeiro. O numero da OS decrescente e o desempate.
 
 ## Clientes
