@@ -26,7 +26,8 @@ ordenação, permissões implícitas nos estados e chamadas da API continuam sen
   preservada e o ícone semântico substitui somente as antigas iniciais quando não há foto.
 - Ordens de Serviço: `Ver` e, quando permitido pelo status, `Saída` ficam visíveis. `Editar`,
   `Orçamento`, `Autorizar`, `PDF` e `Excluir` ficam no menu respeitando exatamente as condições
-  anteriores. Ordens entregues ou canceladas continuam sem ações de edição/saída.
+  anteriores. Ordens entregues continuam sem ações de edição/saída; ordens não autorizadas podem
+  ser editadas ou enviadas para saída para registrar a devolução do equipamento ao cliente.
 - Cadastro de Equipamentos: `Editar` fica visível e `Excluir` fica no menu.
 - Caixa: `Editar` fica visível; `PDF da venda`, quando há venda vinculada, e `Excluir` ficam no menu.
 

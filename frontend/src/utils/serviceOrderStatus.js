@@ -37,3 +37,7 @@ export function isServiceOrderWorkflowClosed(status) {
 export function canEditServiceOrder(status) {
   return normalizeStatus(status) !== "ENTREGUE";
 }
+
+export function canRegisterServiceOrderExit(status) {
+  return normalizeStatus(status) !== "ENTREGUE";
+}

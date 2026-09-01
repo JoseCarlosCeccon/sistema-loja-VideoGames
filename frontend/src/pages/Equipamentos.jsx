@@ -8,6 +8,7 @@ import SortableHeader from "../components/SortableHeader";
 import { equipmentTypeIcon } from "../utils/entityIcons";
 import {
   canEditServiceOrder,
+  canRegisterServiceOrderExit,
   isServiceOrderWorkflowClosed,
   serviceOrderStatusLabel
 } from "../utils/serviceOrderStatus";
@@ -631,7 +632,7 @@ export default function EquipamentosPage({
                         menuLabel={`Mais acoes da OS ${formatNumber(ordem.idOrdemServico)}`}
                         primary={[
                           { key: "view", label: "Ver", onClick: () => openOrderDetails(ordem) },
-                          !isFinalizedOrder(ordem) && { key: "exit", label: "Saida", className: "table-action--edit", onClick: () => handleSendToSaida(ordem) }
+                          canRegisterExit(ordem) && { key: "exit", label: "Saida", className: "table-action--edit", onClick: () => handleSendToSaida(ordem) }
                         ]}
                         secondary={[
                           canEditOrder(ordem) && { key: "edit", label: "Editar", onClick: () => openOrderEditModal(ordem) },
@@ -888,6 +889,7 @@ function OrderModal({ clientes, equipamentos, statuses, form, mode, selectedOrde
 function OrderDetailsModal({ ordem, onClose, onEdit, onBudget, onAuthorize, onSendToSaida }) {
   const finalized = isFinalizedOrder(ordem);
   const editable = canEditOrder(ordem);
+  const exitAvailable = canRegisterExit(ordem);
 
   return (
     <div className="modal-backdrop" role="presentation">
@@ -941,10 +943,12 @@ function OrderDetailsModal({ ordem, onClose, onEdit, onBudget, onAuthorize, onSe
                     Autorizar serviço
                   </button>
                 ) : null}
-                <button type="button" className="gold-button" onClick={onSendToSaida}>
-                  Enviar para saída
-                </button>
               </>
+            ) : null}
+            {exitAvailable ? (
+              <button type="button" className="gold-button" onClick={onSendToSaida}>
+                Enviar para saída
+              </button>
             ) : null}
             <button type="button" className="secondary-button" onClick={() => openServiceOrderPdf(ordem)}>
               Abrir PDF
@@ -1168,6 +1172,10 @@ function isFinalizedOrder(ordem) {
 
 function canEditOrder(ordem) {
   return canEditServiceOrder(ordem?.status);
+}
+
+function canRegisterExit(ordem) {
+  return canRegisterServiceOrderExit(ordem?.status);
 }
 
 function canRegisterBudget(ordem) {

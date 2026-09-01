@@ -33,7 +33,7 @@ dos oito status reais definidos por `OrdemServicoStatus`:
 - Em manutencao: ciano;
 - Pronto: verde;
 - Entregue: neutro;
-- Nao autorizado (`CANCELADO` no banco): vermelho e editavel para permitir a escolha posterior de outro status.
+- Nao autorizado (`CANCELADO` no banco): vermelho, editavel e disponivel para registrar a saida/devolucao do equipamento.
 
 O componente e utilizado na Home, na tabela de Equipamentos / Ordens de Servico e no historico de
 OS do Cliente. Cada badge combina ponto e texto, tem altura minima de 28 px, formato pill e
