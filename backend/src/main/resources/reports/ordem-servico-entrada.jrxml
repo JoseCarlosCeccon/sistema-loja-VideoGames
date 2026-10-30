@@ -110,7 +110,6 @@ Instagram: @gamesacao]]></text></staticText>
                 <textElement><font fontName="SansSerif" size="6.5"/></textElement>
                 <text><![CDATA[O equipamento foi recebido para manutenção conforme as informações acima e será submetido à avaliação técnica.]]></text>
             </staticText>
-
 <!-- CAIXA DE AVISO: PRAZO DE RETIRADA -->
 <frame>
     <reportElement

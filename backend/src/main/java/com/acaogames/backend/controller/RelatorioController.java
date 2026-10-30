@@ -106,7 +106,6 @@ public class RelatorioController {
     ) {
         return relatorioService.produtoVendas(idProduto, inicio, fim, page, size);
     }
-
     @GetMapping(value = "/movimentacoes.csv", produces = "text/csv")
     public ResponseEntity<byte[]> movimentacoesCsv(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,

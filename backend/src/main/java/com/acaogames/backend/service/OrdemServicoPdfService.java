@@ -110,7 +110,10 @@ public class OrdemServicoPdfService {
         return String.format("%06d", idOrdemServico == null ? 0L : idOrdemServico.longValue());
     }
 
-    private String humanizeStatus(String status) {
+    String humanizeStatus(String status) {
+        if ("CANCELADO".equalsIgnoreCase(status)) {
+            return "NÃO AUTORIZADO";
+        }
         return value(status).replace("_", " ");
     }
 

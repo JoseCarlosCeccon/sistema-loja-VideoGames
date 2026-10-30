@@ -6,6 +6,12 @@ import RowActions from "../components/RowActions";
 import ServiceOrderStatusBadge from "../components/ServiceOrderStatusBadge";
 import SortableHeader from "../components/SortableHeader";
 import { equipmentTypeIcon } from "../utils/entityIcons";
+import {
+  canEditServiceOrder,
+  canRegisterServiceOrderExit,
+  isServiceOrderWorkflowClosed,
+  serviceOrderStatusLabel
+} from "../utils/serviceOrderStatus";
 import { nextSort, sortRows } from "../utils/tableSorting";
 
 const marcas = ["Sony", "Microsoft", "Nintendo"];
@@ -627,10 +633,10 @@ export default function EquipamentosPage({
                         menuLabel={`Mais acoes da OS ${formatNumber(ordem.idOrdemServico)}`}
                         primary={[
                           { key: "view", label: "Ver", onClick: () => openOrderDetails(ordem) },
-                          !isFinalizedOrder(ordem) && { key: "exit", label: "Saida", className: "table-action--edit", onClick: () => handleSendToSaida(ordem) }
+                          canRegisterExit(ordem) && { key: "exit", label: "Saida", className: "table-action--edit", onClick: () => handleSendToSaida(ordem) }
                         ]}
                         secondary={[
-                          !isFinalizedOrder(ordem) && { key: "edit", label: "Editar", onClick: () => openOrderEditModal(ordem) },
+                          canEditOrder(ordem) && { key: "edit", label: "Editar", onClick: () => openOrderEditModal(ordem) },
                           canRegisterBudget(ordem) && { key: "budget", label: "Orcamento", onClick: () => openOrderBudgetModal(ordem) },
                           canAuthorizeOrder(ordem) && { key: "authorize", label: "Autorizar", onClick: () => openOrderAuthorizationModal(ordem) },
                           { key: "pdf", label: "PDF", onClick: () => openServiceOrderPdf(ordem) },
@@ -883,6 +889,8 @@ function OrderModal({ clientes, equipamentos, statuses, form, mode, selectedOrde
 
 function OrderDetailsModal({ ordem, onClose, onEdit, onBudget, onAuthorize, onSendToSaida }) {
   const finalized = isFinalizedOrder(ordem);
+  const editable = canEditOrder(ordem);
+  const exitAvailable = canRegisterExit(ordem);
 
   return (
     <div className="modal-backdrop" role="presentation">
@@ -936,15 +944,17 @@ function OrderDetailsModal({ ordem, onClose, onEdit, onBudget, onAuthorize, onSe
                     Autorizar serviço
                   </button>
                 ) : null}
-                <button type="button" className="gold-button" onClick={onSendToSaida}>
-                  Enviar para saída
-                </button>
               </>
+            ) : null}
+            {exitAvailable ? (
+              <button type="button" className="gold-button" onClick={onSendToSaida}>
+                Enviar para saída
+              </button>
             ) : null}
             <button type="button" className="secondary-button" onClick={() => openServiceOrderPdf(ordem)}>
               Abrir PDF
             </button>
-            {!finalized ? (
+            {editable ? (
               <button type="button" className="primary-button" onClick={onEdit}>
                 Editar dados
               </button>
@@ -1158,7 +1168,15 @@ function equipmentLabel(equipamento) {
 }
 
 function isFinalizedOrder(ordem) {
-  return ["ENTREGUE", "CANCELADO"].includes(String(ordem?.status || ""));
+  return isServiceOrderWorkflowClosed(ordem?.status);
+}
+
+function canEditOrder(ordem) {
+  return canEditServiceOrder(ordem?.status);
+}
+
+function canRegisterExit(ordem) {
+  return canRegisterServiceOrderExit(ordem?.status);
 }
 
 function canRegisterBudget(ordem) {
@@ -1254,15 +1272,7 @@ function statusRank(status) {
 }
 
 function humanizeStatus(status) {
-  if (!status) {
-    return "Nao informado";
-  }
-
-  return String(status)
-    .toLowerCase()
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
+  return serviceOrderStatusLabel(status);
 }
 
 function formatDate(value) {

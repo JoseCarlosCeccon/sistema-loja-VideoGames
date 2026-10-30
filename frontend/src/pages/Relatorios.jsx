@@ -171,6 +171,38 @@ export default function RelatoriosPage({ onFeedback }) {
   async function handleExportCsv() {
     setExporting(true);
     try {
+      let columns = report.columns || [];
+      let rows = report.rows || [];
+      if (activeReport === "produtos") {
+        const firstBatch = await api.get(`/relatorios/produtos?${reportParams(0, 100).toString()}`);
+        columns = firstBatch?.columns || [];
+        rows = [...(firstBatch?.rows || [])];
+        for (let currentPage = 1; currentPage < Number(firstBatch?.totalPages || 0); currentPage += 1) {
+          const batch = await api.get(`/relatorios/produtos?${reportParams(currentPage, 100).toString()}`);
+          rows.push(...(batch?.rows || []));
+        }
+      }
+
+      const blob = new Blob(["\ufeff", toCsv(columns, rows)], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `relatorio-${activeReport}-${period.start || "inicio"}-${period.end || "fim"}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      notify({ type: "success", message: "Relatório exportado em CSV." });
+    } catch (error) {
+      notify({ type: "error", message: error.message || "Não foi possível exportar o relatório." });
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function handleExportMovementsCsv() {
+    setExporting(true);
+    try {
       const params = new URLSearchParams();
       if (period.start) params.set("inicio", period.start);
       if (period.end) params.set("fim", period.end);
@@ -185,7 +217,7 @@ export default function RelatoriosPage({ onFeedback }) {
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       notify({ type: "success", message: "Movimentações exportadas em CSV." });
     } catch (error) {
-      notify({ type: "error", message: error.message || "Não foi possível exportar o relatório." });
+      notify({ type: "error", message: error.message || "Não foi possível exportar as movimentações." });
     } finally {
       setExporting(false);
     }
@@ -205,13 +237,17 @@ export default function RelatoriosPage({ onFeedback }) {
         <div>
           <span className="section-label">Análise operacional</span>
           <h1 id="reports-title">Relatórios</h1>
-          <p>Consulte os relatórios e baixe todas as movimentações do período em CSV.</p>
+          <p>Consulte relatórios por período e exporte dados do relatório ou todas as movimentações em CSV.</p>
         </div>
         <div className="management-actions reports-actions">
           <button type="button" className="ghost-button" onClick={refreshReport} disabled={loading}>
             {loading ? "Atualizando..." : "Atualizar"}
           </button>
           <button type="button" className="secondary-button reports-action-button" onClick={handleExportCsv} disabled={exporting || loading}>
+            <SvgIcon src={arrowDownIcon} size={15} />
+            {exporting ? "Exportando..." : "CSV do relatório"}
+          </button>
+          <button type="button" className="secondary-button reports-action-button" onClick={handleExportMovementsCsv} disabled={exporting || loading}>
             <SvgIcon src={arrowDownIcon} size={15} />
             {exporting ? "Exportando..." : "Movimentações CSV"}
           </button>
@@ -425,6 +461,15 @@ function DetailItem({ label, value }) {
 
 function SvgIcon({ src, size = 18 }) {
   return <span className="svg-icon" style={{ "--icon-url": `url("${src}")`, "--icon-size": `${size}px` }} aria-hidden="true" />;
+}
+
+function toCsv(columns, rows) {
+  return [columns.map((column) => escapeCsv(column.label)).join(";"), ...rows.map((row) => columns.map((column) => escapeCsv(formatCellValue(row[column.key], column.type))).join(";"))].join("\n");
+}
+
+function escapeCsv(value) {
+  const text = String(value ?? "");
+  return /[;"\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
 function formatCellValue(value, type) {

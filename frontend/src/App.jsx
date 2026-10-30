@@ -4,6 +4,7 @@ import LoginPage from "./pages/Login";
 import ServiceOrderStatusBadge from "./components/ServiceOrderStatusBadge";
 import UserMenu from "./components/UserMenu";
 import { formatCpf, formatPhone } from "./utils/masks";
+import { canRegisterServiceOrderExit } from "./utils/serviceOrderStatus";
 import currentDesignCss from "./current-design.css?raw";
 import fundoPersonagensUrl from "./assets/images/FUNDO DE PERSONAGENS.jpg";
 import logoAcaoGames from "./assets/images/logo acao games.jpg";
@@ -45,7 +46,7 @@ const actionItems = [
   {
     id: "saida",
     label: "Registrar Saída",
-    description: "Saída / entrega de equipamentos prontos",
+    description: "Saída / entrega de equipamentos prontos ou não autorizados",
     icon: <SvgIcon src={arrowUpIcon} size={20} />,
     tone: "slate"
   },
@@ -1339,7 +1340,7 @@ function EntradaModal({
 }
 
 function SaidaModal({ ordens, form, saving, onClose, onSubmit, onChange }) {
-  const ordensDisponiveis = ordens.filter((ordem) => !["ENTREGUE", "CANCELADO"].includes(String(ordem.status || "")));
+  const ordensDisponiveis = ordens.filter((ordem) => canRegisterServiceOrderExit(ordem.status));
   const selectedOrder = ordens.find((ordem) => String(ordem.idOrdemServico) === String(form.idOrdemServico));
   const valorServico = parseMoney(form.valorServico);
   const ordemOptions = ordensDisponiveis.map((ordem) => ({
