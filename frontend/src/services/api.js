@@ -18,7 +18,7 @@ function readAuthToken() {
 }
 
 async function request(path, options = {}) {
-  const { timeoutMs = DEFAULT_TIMEOUT_MS, ...fetchOptions } = options;
+  const { timeoutMs = DEFAULT_TIMEOUT_MS, responseType, ...fetchOptions } = options;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   const isFormData = fetchOptions.body instanceof FormData;
@@ -55,7 +55,7 @@ async function request(path, options = {}) {
       throw requestError;
     }
 
-    return payload;
+    return responseType === "blob" ? response.blob() : payload;
   } catch (error) {
     if (error.name === "AbortError") {
       throw new Error("A API demorou para responder. Reinicie o backend e tente novamente.");
@@ -92,6 +92,9 @@ export const api = {
   },
   get(path) {
     return request(path);
+  },
+  download(path) {
+    return request(path, { responseType: "blob" });
   },
   post(path, body) {
     return request(path, {

@@ -19,6 +19,7 @@ public class DashboardService {
             "EM_ANALISE",
             "AGUARDANDO_APROVACAO",
             "APROVADO",
+            "NAO_AUTORIZADO",
             "EM_MANUTENCAO"
     );
 

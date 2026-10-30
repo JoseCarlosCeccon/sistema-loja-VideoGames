@@ -11,6 +11,8 @@ public class RelatorioResponse {
     private List<Column> columns = new ArrayList<Column>();
     private List<Map<String, Object>> rows = new ArrayList<Map<String, Object>>();
     private Map<String, Object> summary = new LinkedHashMap<String, Object>();
+    private Map<String, Object> comparison = new LinkedHashMap<String, Object>();
+    private Map<String, List<Map<String, Object>>> rankings = new LinkedHashMap<String, List<Map<String, Object>>>();
     private int page;
     private int size;
     private long totalElements;
@@ -46,6 +48,22 @@ public class RelatorioResponse {
 
     public void setSummary(Map<String, Object> summary) {
         this.summary = summary;
+    }
+
+    public Map<String, Object> getComparison() {
+        return comparison;
+    }
+
+    public void setComparison(Map<String, Object> comparison) {
+        this.comparison = comparison;
+    }
+
+    public Map<String, List<Map<String, Object>>> getRankings() {
+        return rankings;
+    }
+
+    public void setRankings(Map<String, List<Map<String, Object>>> rankings) {
+        this.rankings = rankings;
     }
 
     public int getPage() {

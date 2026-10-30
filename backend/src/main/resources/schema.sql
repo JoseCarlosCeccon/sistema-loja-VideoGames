@@ -93,6 +93,7 @@ CREATE TABLE IF NOT EXISTS ordem_servico (
         'EM_ANALISE',
         'AGUARDANDO_APROVACAO',
         'APROVADO',
+        'NAO_AUTORIZADO',
         'EM_MANUTENCAO',
         'PRONTO',
         'ENTREGUE',
@@ -223,9 +224,12 @@ CREATE INDEX IF NOT EXISTS idx_os_numero_serie ON ordem_servico(numero_serie);
 CREATE INDEX IF NOT EXISTS idx_produto_nome ON produto(nome);
 CREATE INDEX IF NOT EXISTS idx_produto_categoria ON produto(categoria);
 CREATE INDEX IF NOT EXISTS idx_venda_data ON venda(data_venda);
+CREATE INDEX IF NOT EXISTS idx_item_venda_venda ON item_venda(id_venda);
+CREATE INDEX IF NOT EXISTS idx_item_venda_produto ON item_venda(id_produto);
 CREATE INDEX IF NOT EXISTS idx_caixa_data ON movimento_caixa(data_movimento);
 CREATE INDEX IF NOT EXISTS idx_caixa_tipo ON movimento_caixa(tipo);
 CREATE INDEX IF NOT EXISTS idx_caixa_categoria ON movimento_caixa(categoria);
+CREATE INDEX IF NOT EXISTS idx_caixa_venda_tipo ON movimento_caixa(id_venda, tipo);
 CREATE INDEX IF NOT EXISTS idx_estoque_data ON movimentacao_estoque(data_movimentacao);
 CREATE INDEX IF NOT EXISTS idx_estoque_produto ON movimentacao_estoque(id_produto);
 

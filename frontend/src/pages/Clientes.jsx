@@ -1,12 +1,24 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../services/api";
 import searchIcon from "../assets/icons/search.svg";
+import userIcon from "../assets/icons/user.svg";
 import { formatCpf, formatPhone } from "../utils/masks";
+import EntityCell from "../components/EntityCell";
+import RowActions from "../components/RowActions";
+import ServiceOrderStatusBadge from "../components/ServiceOrderStatusBadge";
+import SortableHeader from "../components/SortableHeader";
+import { compareText, nextSort, sortRows } from "../utils/tableSorting";
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL"
 });
+
+const clientSortColumns = {
+  nome: { type: "text", value: (cliente) => cliente.nome },
+  status: { type: "number", value: (cliente) => cliente.ativo ? 1 : 0 },
+  cadastro: { type: "date", value: (cliente) => cliente.dataCadastro }
+};
 
 function createEmptyClienteForm() {
   return {
@@ -80,7 +92,14 @@ export default function ClientesPage({
   const [clienteRecords, setClienteRecords] = useState({ ordens: [], vendas: [] });
   const [recordsLoading, setRecordsLoading] = useState(false);
   const [savingCliente, setSavingCliente] = useState(false);
-  const filteredClientes = filterClientes(clientes, search);
+  const [clientSort, setClientSort] = useState({ sortBy: "nome", sortOrder: "asc" });
+  const filteredClientes = sortRows(
+    filterClientes(clientes, search),
+    clientSort,
+    clientSortColumns,
+    (left, right) => compareText(left.nome, right.nome)
+      || Number(right.idCliente || 0) - Number(left.idCliente || 0)
+  );
   const totalClientes = clientes.length;
   const activeClientes = clientes.filter((cliente) => cliente.ativo).length;
   const inactiveClientes = clientes.length - activeClientes;
@@ -93,6 +112,10 @@ export default function ClientesPage({
     if (onFeedback) {
       onFeedback(feedback);
     }
+  }
+
+  function updateClientSort(sortBy) {
+    setClientSort((current) => nextSort(current, sortBy));
   }
 
   async function refreshClientes(options = {}) {
@@ -358,15 +381,15 @@ export default function ClientesPage({
           <div className="empty-state">Carregando clientes...</div>
         ) : (
           <div className="table-wrap">
-            <table className="compact-table clients-table">
+            <table className="compact-table clients-table data-table">
               <thead>
                 <tr>
-                  <th>Cliente</th>
+                  <SortableHeader label="Cliente" sortKey="nome" sort={clientSort} onSort={updateClientSort} />
                   <th>Telefone</th>
                   <th>CPF</th>
                   <th>Email</th>
-                  <th>Status</th>
-                  <th>Cadastro</th>
+                  <SortableHeader label="Status" sortKey="status" sort={clientSort} onSort={updateClientSort} />
+                  <SortableHeader label="Cadastro" sortKey="cadastro" sort={clientSort} onSort={updateClientSort} />
                   <th>Acoes</th>
                 </tr>
               </thead>
@@ -374,13 +397,12 @@ export default function ClientesPage({
                 {filteredClientes.length ? filteredClientes.map((cliente) => (
                   <tr key={cliente.idCliente}>
                     <td>
-                      <div className="client-cell">
-                        <span className="client-avatar">{clienteInitials(cliente)}</span>
-                        <div>
-                          <strong>{cliente.nome}</strong>
-                          <small>#{formatClientNumber(cliente.idCliente)}</small>
-                        </div>
-                      </div>
+                      <EntityCell
+                        title={cliente.nome}
+                        subtitle={`#${formatClientNumber(cliente.idCliente)}`}
+                        iconSrc={userIcon}
+                        tone="client"
+                      />
                     </td>
                     <td>{displayValue(cliente.telefone)}</td>
                     <td>{displayValue(cliente.cpf)}</td>
@@ -392,17 +414,17 @@ export default function ClientesPage({
                     </td>
                     <td>{formatDateTime(cliente.dataCadastro)}</td>
                     <td>
-                      <div className="row-actions">
-                        <button type="button" className="table-action" onClick={() => openClienteDetails(cliente)}>
-                          Ver
-                        </button>
-                        <button type="button" className="table-action" onClick={() => openClienteRecords(cliente)}>
-                          Registros
-                        </button>
-                        <button type="button" className="table-action table-action--danger" onClick={() => handleClienteDelete(cliente)}>
-                          Excluir
-                        </button>
-                      </div>
+                      <RowActions
+                        menuLabel={`Mais acoes de ${cliente.nome}`}
+                        primary={[
+                          { key: "view", label: "Ver", onClick: () => openClienteDetails(cliente) },
+                          { key: "edit", label: "Editar", className: "table-action--edit", onClick: () => openClienteEditModal(cliente) }
+                        ]}
+                        secondary={[
+                          { key: "records", label: "Registros", onClick: () => openClienteRecords(cliente) },
+                          { key: "delete", label: "Excluir", danger: true, onClick: () => handleClienteDelete(cliente) }
+                        ]}
+                      />
                     </td>
                   </tr>
                 )) : (
@@ -640,7 +662,7 @@ function ClienteRecordsModal({ cliente, records, loading, onClose }) {
                         <tr>
                           <th>OS</th>
                           <th>Equipamento</th>
-                          <th>Status</th>
+                          <th className="service-order-status-column">Status</th>
                           <th>Entrada</th>
                           <th>Valor</th>
                           <th>PDF</th>
@@ -651,10 +673,8 @@ function ClienteRecordsModal({ cliente, records, loading, onClose }) {
                           <tr key={ordem.idOrdemServico}>
                             <td>#{formatRecordNumber(ordem.idOrdemServico)}</td>
                             <td>{equipmentLabel(ordem.equipamento)}</td>
-                            <td>
-                              <span className={`status-badge status-badge--${statusTone(ordem.status)}`}>
-                                {humanizeStatus(ordem.status)}
-                              </span>
+                            <td className="service-order-status-column">
+                              <ServiceOrderStatusBadge status={ordem.status} />
                             </td>
                             <td>{formatDate(ordem.dataEntrada)}</td>
                             <td>{currencyFormatter.format(parseMoney(ordem.valorServico))}</td>
@@ -803,23 +823,6 @@ function equipmentLabel(equipamento) {
     .join(" - ");
 }
 
-function statusTone(status) {
-  const normalized = String(status || "").toLowerCase();
-  if (normalized.includes("pronto") || normalized.includes("entregue")) {
-    return "green";
-  }
-
-  if (normalized.includes("aprovacao") || normalized.includes("analise") || normalized.includes("manutencao")) {
-    return "amber";
-  }
-
-  if (normalized.includes("cancel")) {
-    return "red";
-  }
-
-  return "blue";
-}
-
 function humanizeStatus(status) {
   if (!status) {
     return "Nao informado";
@@ -848,12 +851,6 @@ function openSaleReceiptPdf(venda) {
   }
 
   window.open(api.fileUrl(`/vendas/${idVenda}/pdf`), "_blank", "noopener,noreferrer");
-}
-
-function clienteInitials(cliente) {
-  const parts = String(cliente?.nome || "CL").trim().split(/\s+/);
-  const initials = parts.slice(0, 2).map((part) => part.charAt(0)).join("");
-  return initials.toUpperCase() || "CL";
 }
 
 function displayValue(value) {

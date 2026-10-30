@@ -1,6 +1,8 @@
 import React, { lazy, startTransition, Suspense, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { api, AUTH_REJECTED_EVENT, AUTH_STORAGE_KEY } from "./services/api";
 import LoginPage from "./pages/Login";
+import ServiceOrderStatusBadge from "./components/ServiceOrderStatusBadge";
+import UserMenu from "./components/UserMenu";
 import { formatCpf, formatPhone } from "./utils/masks";
 import currentDesignCss from "./current-design.css?raw";
 import fundoPersonagensUrl from "./assets/images/FUNDO DE PERSONAGENS.jpg";
@@ -9,6 +11,7 @@ import arrowDownIcon from "./assets/icons/arrow-down-to-line.svg";
 import arrowUpIcon from "./assets/icons/arrow-up-from-line.svg";
 import cartIcon from "./assets/icons/bootstrap_cart_plus.svg";
 import chevronRightIcon from "./assets/icons/chevron-right.svg";
+import fileTextIcon from "./assets/icons/file-text.svg";
 import gameIcon from "./assets/icons/gamepad.svg";
 import graphIcon from "./assets/icons/graph-icon.svg";
 import homeIcon from "./assets/icons/home.svg";
@@ -63,17 +66,19 @@ const emptyDashboard = {
   vendasDoDia: 0,
   caixaDoDia: 0,
   saldoCaixa: 0,
+  produtosCadastrados: 0,
   ordensRecentes: [],
-  vendasRecentes: []
+  vendasRecentes: [],
+  ordensPorStatus: []
 };
 
 const marcas = ["Sony", "Microsoft", "Nintendo"];
 const tiposEquipamento = ["Console", "Controle"];
 const formasPagamento = [
   { value: "DINHEIRO", label: "Dinheiro" },
-  { value: "PIX", label: "PIX" },
-  { value: "CARTAO_DEBITO", label: "Cartao debito" },
-  { value: "CARTAO_CREDITO", label: "Cartao credito" }
+  { value: "PIX", label: "Pix" },
+  { value: "CARTAO_DEBITO", label: "Cartão de débito" },
+  { value: "CARTAO_CREDITO", label: "Cartão de crédito" }
 ];
 const prazosGarantia = [
   { value: "0", label: "Sem garantia" },
@@ -782,6 +787,11 @@ function App() {
 
   const recentOrders = (dashboard.ordensRecentes || []).slice(0, 5);
   const recentSales = (dashboard.vendasRecentes || []).slice(0, 5);
+  const awaitingApprovalCount = (dashboard.ordensPorStatus || []).find(
+    (item) => item.status === "AGUARDANDO_APROVACAO"
+  )?.total || 0;
+  const oldestReadyDate = findOldestReadyDate(ordens);
+  const monitoredProducts = Number(dashboard.produtosCadastrados || produtos.length || 0);
   const isStandalonePage = activeSection === "clientes"
     || activeSection === "equipamentos"
     || activeSection === "produtos"
@@ -818,18 +828,17 @@ function App() {
             type="button"
             className="header-link theme-toggle-button"
             aria-pressed={themeMode === "dark"}
+            aria-label={themeMode === "light" ? "Ativar tema escuro" : "Ativar tema claro"}
+            title={themeMode === "light" ? "Ativar tema escuro" : "Ativar tema claro"}
             onClick={() => setThemeMode((current) => (current === "light" ? "dark" : "light"))}
           >
             <span className={`theme-toggle-icon theme-toggle-icon--${themeMode === "light" ? "dark" : "light"}`} aria-hidden="true" />
-            {themeMode === "light" ? "Tema escuro" : "Tema claro"}
           </button>
-          <div className="header-user-chip">
-            <span>{authUser.nome || authUser.login}</span>
-            <small>{humanizeStatus(authUser.perfil)}</small>
-          </div>
-          <button type="button" className="header-link" onClick={handleLogout}>
-            Sair
-          </button>
+          <UserMenu
+            name={authUser.nome || authUser.login}
+            profile={humanizeStatus(authUser.perfil)}
+            onLogout={handleLogout}
+          />
         </div>
       </header>
 
@@ -911,24 +920,46 @@ function App() {
         </section>
 
         <section className="metric-grid" aria-label="Resumo">
-          <MetricCard label="OS em aberto" value={dashboard.ordensAbertas} accent="cyan" />
-          <MetricCard label="Prontos para entrega" value={dashboard.ordensProntas} accent="green" />
+          <MetricCard
+            label="OS em aberto"
+            value={dashboard.ordensAbertas}
+            detail={countLabel(awaitingApprovalCount, "aguardando aprovação", "aguardando aprovação")}
+            accent="cyan"
+          />
+          <MetricCard
+            label="Prontos para entrega"
+            value={dashboard.ordensProntas}
+            detail={oldestReadyDate ? `Mais antigo: ${formatShortDate(oldestReadyDate)}` : "Nenhuma pronta no momento"}
+            accent="green"
+          />
           <MetricCard label="Vendas do dia" value={currencyFormatter.format(dashboard.vendasDoDia || 0)} accent="blue" />
           <MetricCard label="Caixa do dia" value={currencyFormatter.format(dashboard.caixaDoDia || 0)} accent="gold" />
-          <MetricCard label="Estoque baixo" value={dashboard.produtosEstoqueBaixo} accent="red" />
+          <MetricCard
+            label="Estoque baixo"
+            value={dashboard.produtosEstoqueBaixo}
+            detail={countLabel(monitoredProducts, "produto monitorado", "produtos monitorados")}
+            accent="red"
+          />
         </section>
 
         <section className="dashboard-main-grid">
-          <Panel title="Ordens de Servico Recentes">
+          <Panel
+            title="Ordens de Serviço Recentes"
+            action={(
+              <button type="button" className="panel-link" onClick={openEquipamentosPage}>
+                Ver todas <span aria-hidden="true">→</span>
+              </button>
+            )}
+          >
             <div className="table-wrap">
               <table className="compact-table">
                 <thead>
                   <tr>
-                    <th>N OS</th>
+                    <th>Nº OS</th>
                     <th>Cliente</th>
                     <th>Equipamento</th>
                     <th>Problema</th>
-                    <th>Status</th>
+                    <th className="service-order-status-column">Status</th>
                     <th>Entrada</th>
                     <th>PDF</th>
                   </tr>
@@ -937,14 +968,24 @@ function App() {
                   {recentOrders.length ? recentOrders.map((ordem) => (
                     <tr key={ordem.idOrdemServico}>
                       <td>#{formatOrderNumber(ordem.idOrdemServico)}</td>
-                      <td>{ordem.cliente?.nome || "Cliente nao informado"}</td>
+                      <td>{ordem.cliente?.nome || "Cliente não informado"}</td>
                       <td>{equipamentoLabel(ordem.equipamento)}</td>
-                      <td>{ordem.problemaRelatado || "Nao informado"}</td>
-                      <td><StatusBadge status={ordem.status} /></td>
+                      <td className="recent-order-problem">
+                        <span className="recent-order-problem__text" title={ordem.problemaRelatado || "Não informado"}>
+                          {ordem.problemaRelatado || "Não informado"}
+                        </span>
+                      </td>
+                      <td className="service-order-status-column"><ServiceOrderStatusBadge status={ordem.status} /></td>
                       <td>{formatDate(ordem.dataEntrada)}</td>
                       <td>
-                        <button type="button" className="table-action" onClick={() => openServiceOrderPdf(ordem)}>
-                          PDF
+                        <button
+                          type="button"
+                          className="table-action dashboard-pdf-action"
+                          onClick={() => openServiceOrderPdf(ordem)}
+                          title={`Abrir PDF da OS ${formatOrderNumber(ordem.idOrdemServico)}`}
+                          aria-label={`Abrir PDF da OS ${formatOrderNumber(ordem.idOrdemServico)}`}
+                        >
+                          <SvgIcon src={fileTextIcon} size={15} />
                         </button>
                       </td>
                     </tr>
@@ -958,17 +999,17 @@ function App() {
             </div>
           </Panel>
 
-          <Panel title="Vendas Recentes">
+          <Panel
+            title="Vendas Recentes"
+            action={(
+              <button type="button" className="panel-link" onClick={openCaixaPage}>
+                Ver todas <span aria-hidden="true">→</span>
+              </button>
+            )}
+          >
             <div className="sales-list">
               {recentSales.length ? recentSales.map((item) => (
-                <article key={item.idVenda || item.idProduto || item.nome} className="sale-row">
-                  <div className="sale-thumb">{saleInitials(item)}</div>
-                  <div>
-                    <strong>{item.nome || `Venda #${formatOrderNumber(item.idVenda)}`}</strong>
-                    <span>{item.categoria || item.formaPagamento || "Venda"}</span>
-                  </div>
-                  <strong>{currencyFormatter.format(item.valorTotal || item.valorVenda || 0)}</strong>
-                </article>
+                <RecentSaleCard key={item.idVenda || item.idProduto || item.nome} sale={item} />
               )) : (
                 <div className="empty-state">Nenhuma venda registrada ainda.</div>
               )}
@@ -1865,41 +1906,48 @@ function SvgIcon({ src, size = 18 }) {
   );
 }
 
-function MetricCard({ label, value, accent }) {
+function MetricCard({ label, value, detail, accent }) {
   return (
     <article className={`metric-card metric-card--${accent}`}>
-      <span>{label}</span>
       <strong>{value}</strong>
+      <span>{label}</span>
+      {detail ? <small>{detail}</small> : null}
     </article>
   );
 }
 
-function Panel({ title, children }) {
+function Panel({ title, action, children }) {
   return (
     <article className="panel">
       <div className="panel-head">
         <h2>{title}</h2>
+        {action || null}
       </div>
       {children}
     </article>
   );
 }
 
-function StatusBadge({ status }) {
-  const normalized = String(status || "").toLowerCase();
-  const tone =
-    normalized.includes("pronto")
-      ? "green"
-      : normalized.includes("aprovacao") || normalized.includes("analise") || normalized.includes("manutencao")
-      ? "amber"
-      : normalized.includes("cancel")
-      ? "red"
-      : "blue";
+function RecentSaleCard({ sale }) {
+  const metadata = [
+    sale.cliente?.nome,
+    paymentMethodLabel(sale.formaPagamento),
+    sale.dataVenda ? formatDate(sale.dataVenda) : null
+  ].filter(Boolean);
 
   return (
-    <span className={`status-badge status-badge--${tone}`}>
-      {humanizeStatus(status)}
-    </span>
+    <article className="sale-row">
+      <div className="sale-thumb">{saleInitials(sale)}</div>
+      <div className="sale-row__content">
+        <strong className="sale-row__title">
+          {sale.idVenda ? `Venda #${formatOrderNumber(sale.idVenda)}` : sale.nome || "Venda"}
+        </strong>
+        <span className="sale-row__meta">{metadata.join(" · ") || "Venda"}</span>
+      </div>
+      <strong className="sale-row__value">
+        {currencyFormatter.format(sale.valorTotal || sale.valorVenda || 0)}
+      </strong>
+    </article>
   );
 }
 
@@ -2098,12 +2146,38 @@ function humanizeStatus(status) {
     .join(" ");
 }
 
+function paymentMethodLabel(value) {
+  if (!value) {
+    return "";
+  }
+  const paymentMethod = formasPagamento.find((item) => item.value === value);
+  return paymentMethod?.label || humanizeStatus(value);
+}
+
+function countLabel(value, singular, plural) {
+  const count = Number(value || 0);
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function findOldestReadyDate(ordens) {
+  return (ordens || []).reduce((oldestDate, ordem) => {
+    if (ordem.status !== "PRONTO" || !ordem.dataEntrada) {
+      return oldestDate;
+    }
+    return !oldestDate || ordem.dataEntrada < oldestDate ? ordem.dataEntrada : oldestDate;
+  }, "");
+}
+
 function formatDate(value) {
   if (!value) {
     return "Sem data";
   }
 
   return new Date(`${value}T00:00:00`).toLocaleDateString("pt-BR");
+}
+
+function formatShortDate(value) {
+  return formatDate(value).slice(0, 5);
 }
 
 function formatOrderNumber(value) {
